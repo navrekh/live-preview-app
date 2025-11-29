@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+
+const SignIn = () => {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // TODO: Connect to AWS backend
+    setTimeout(() => {
+      setIsLoading(false);
+      toast.success("Signed in successfully!");
+      navigate("/dashboard");
+    }, 1500);
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Left - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 via-background to-accent/10 items-center justify-center p-12">
+        <div className="max-w-md space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
+              <Sparkles className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-2xl text-foreground">MobileDev</span>
+          </div>
+          <h2 className="text-3xl font-bold text-foreground">
+            Build mobile apps with the power of AI
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Turn your ideas into production-ready iOS and Android apps in minutes.
+          </p>
+        </div>
+      </div>
+
+      {/* Right - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center lg:text-left">
+            <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-xl text-foreground">MobileDev</span>
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground mt-2">Sign in to your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button 
+              type="submit" 
+              variant="gradient" 
+              className="w-full h-12 text-base"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <p className="text-center text-muted-foreground">
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-primary hover:text-primary/80 font-medium transition-colors">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SignIn;
