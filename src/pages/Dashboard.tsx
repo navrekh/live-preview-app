@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/Logo";
 import {
-  Sparkles,
   Plus,
   FolderOpen,
   Clock,
@@ -90,11 +90,8 @@ const Dashboard = () => {
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-lg text-foreground">AppDev</span>
+          <Link to="/">
+            <Logo size="sm" />
           </Link>
 
           <div className="flex items-center gap-4">

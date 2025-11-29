@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Shield, Lock } from "lucide-react";
+import Logo from "@/components/Logo";
+import { Shield, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 const securityQuestionOptions = [
@@ -74,11 +75,8 @@ const SecurityQuestions = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="w-full max-w-lg space-y-8">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-2xl text-foreground">AppDev</span>
+          <div className="mb-8">
+            <Logo size="lg" className="justify-center" />
           </div>
 
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">

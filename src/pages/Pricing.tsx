@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { Check, Sparkles, Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/Logo";
 import { toast } from "sonner";
 
 const Pricing = () => {
@@ -22,13 +23,10 @@ const Pricing = () => {
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div 
-            className="flex items-center gap-3 cursor-pointer"
+            className="cursor-pointer"
             onClick={() => navigate("/")}
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-lg text-foreground">AppDev</span>
+            <Logo size="sm" />
           </div>
           <Button 
             variant="outline" 

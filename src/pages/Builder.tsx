@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft,
   Download,
-  Sparkles,
   Send,
   Paperclip,
   Apple,
@@ -14,6 +13,7 @@ import {
 import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
 import PreviewScreen from "@/components/PreviewScreen";
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -157,12 +157,7 @@ const Builder = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-lg text-foreground">AppDev</span>
-            </div>
+            <Logo size="sm" />
           </div>
           
           {/* Action Buttons */}
@@ -229,9 +224,7 @@ const Builder = () => {
             {messages.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center space-y-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto">
-                    <Sparkles className="w-8 h-8 text-primary-foreground" />
-                  </div>
+                  <Logo size="xl" showText={false} className="justify-center" />
                   <div>
                     <h2 className="text-xl font-semibold text-foreground">Start Building</h2>
                     <p className="text-muted-foreground mt-1">Describe your app idea to get started</p>
