@@ -46,7 +46,7 @@ const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden">
-            <h1 className="font-bold text-foreground">MobileDev</h1>
+            <h1 className="font-bold text-foreground">AppDev</h1>
             <p className="text-xs text-muted-foreground">AI App Builder</p>
           </div>
         )}
