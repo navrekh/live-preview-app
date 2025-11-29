@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import Logo from "@/components/Logo";
 import { Eye, EyeOff, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -45,10 +47,13 @@ const SignUp = () => {
     setIsLoading(true);
     
     // TODO: Connect to AWS backend
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Set mock auth token for testing (remove when AWS backend is connected)
+      localStorage.setItem('auth_token', 'mock_token_' + Date.now());
+      await refreshUser();
       setIsLoading(false);
-      toast.success("Account created! Please set up your security questions.");
-      navigate("/security-questions");
+      toast.success("Account created successfully!");
+      navigate("/dashboard");
     }, 1500);
   };
 
