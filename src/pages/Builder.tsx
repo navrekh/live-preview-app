@@ -11,10 +11,14 @@ import {
   Rocket,
   Loader2,
   Sparkles,
-  Code
+  Code,
+  Settings,
+  PanelRightClose,
+  PanelRightOpen
 } from "lucide-react";
 import BuildProgress from "@/components/BuildProgress";
 import { AppPreview } from "@/components/preview";
+import { CodeTabs, CustomizationPanel, DownloadModal } from "@/components/builder";
 import Logo from "@/components/Logo";
 import FrameworkSelectModal from "@/components/FrameworkSelectModal";
 import { Button } from "@/components/ui/button";
@@ -28,7 +32,7 @@ import {
   GeneratedApp,
   GenerationProgress 
 } from "@/services/generator";
-import { AppType } from "@/services/generator/types";
+import { AppType, FeatureType, ColorTheme } from "@/services/generator/types";
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -69,15 +73,23 @@ const Builder = () => {
   const [inputValue, setInputValue] = useState("");
   const [readyToBuild, setReadyToBuild] = useState(false);
   const [showFrameworkModal, setShowFrameworkModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showCustomization, setShowCustomization] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<"react-native" | "flutter" | null>(null);
   const [generatedApp, setGeneratedApp] = useState<GeneratedApp | null>(null);
   const [previewScreen, setPreviewScreen] = useState("splash");
-  const [detectedAppType, setDetectedAppType] = useState<"food-delivery" | "ecommerce" | "social" | "booking" | "fitness" | "travel" | "education" | "healthcare">("ecommerce");
-  const [previewTheme, setPreviewTheme] = useState({
+  const [activeTab, setActiveTab] = useState<"preview" | "react-native" | "backend" | "database">("preview");
+  
+  // Customization state
+  const [appName, setAppName] = useState("MyApp");
+  const [detectedAppType, setDetectedAppType] = useState<AppType>("ecommerce");
+  const [previewTheme, setPreviewTheme] = useState<ColorTheme>({
     primary: '#3F51B5',
     secondary: '#FF4081',
     accent: '#00BCD4',
   });
+  const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>(['login', 'payment', 'search', 'favorites']);
+  const [selectedScreens, setSelectedScreens] = useState<string[]>(['Splash', 'Login', 'Home', 'Cart', 'Profile']);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -135,7 +147,7 @@ const Builder = () => {
       if (detected) {
         setDetectedAppType(detected);
         // Update theme based on app type
-        const themesByType: Record<string, { primary: string; secondary: string; accent: string }> = {
+        const themesByType: Record<string, ColorTheme> = {
           'food-delivery': { primary: '#FF5722', secondary: '#FFC107', accent: '#4CAF50' },
           'ecommerce': { primary: '#3F51B5', secondary: '#FF4081', accent: '#00BCD4' },
           'social': { primary: '#E91E63', secondary: '#9C27B0', accent: '#03A9F4' },
@@ -147,6 +159,12 @@ const Builder = () => {
         };
         setPreviewTheme(themesByType[detected] || themesByType['ecommerce']);
         setPreviewScreen('home');
+      }
+      
+      // Extract app name from conversation
+      const extractedName = extractAppName(allUserMessages);
+      if (extractedName) {
+        setAppName(extractedName);
       }
     } catch (error) {
       toast.error("Failed to send message. Please try again.");
@@ -168,6 +186,7 @@ const Builder = () => {
     setBuildComplete(false);
     setReadyToBuild(false);
     setGeneratedApp(null);
+    setActiveTab("preview");
     
     const frameworkName = framework === "react-native" ? "React Native" : "Flutter";
     toast.info(`Starting ${frameworkName} app generation with Node.js backend... This will use 20 credits.`);
@@ -179,12 +198,15 @@ const Builder = () => {
       .join(" ");
 
     // Parse requirements from conversation
-    const appName = extractAppName(conversationText) || "MyApp";
-    const requirements = parseConversationToRequirements(conversationText, appName, framework);
+    const extractedName = extractAppName(conversationText) || appName;
+    const requirements = parseConversationToRequirements(conversationText, extractedName, framework);
     
-    // Update preview state
+    // Update state with parsed requirements
+    setAppName(extractedName);
     setDetectedAppType(requirements.type);
     setPreviewTheme(requirements.colorTheme);
+    setSelectedFeatures(requirements.features);
+    setSelectedScreens(requirements.screens);
     setPreviewScreen("splash");
 
     const stepMapping: Record<string, number> = {
@@ -230,11 +252,12 @@ const Builder = () => {
       setBuildProgress(100);
       setIsGenerating(false);
       setBuildComplete(true);
+      setShowCustomization(true);
       
       const completeMessage: Message = {
         id: `complete-${Date.now()}`,
         type: "assistant",
-        content: `🎉 **Your ${appName} app is ready!**\n\n**Generated:**\n- ${result.files.filter(f => f.type !== 'backend').length} React Native files\n- ${result.files.filter(f => f.type === 'backend').length} Node.js backend files\n- Database schema\n\nYou can now download the code or publish to app stores. Use the buttons in the header to proceed.`,
+        content: `🎉 **Your ${extractedName} app is ready!**\n\n**Generated:**\n- ${result.files.filter(f => f.type !== 'backend').length} React Native files\n- ${result.files.filter(f => f.type === 'backend').length} Node.js backend files\n- Database schema\n\nYou can now customize, download, or publish your app using the controls on the right.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, completeMessage]);
@@ -249,6 +272,73 @@ const Builder = () => {
         prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
       );
       toast.error("Failed to generate app. Please try again.");
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!selectedFramework) {
+      setShowFrameworkModal(true);
+      return;
+    }
+    
+    if (balance < 20) {
+      toast.error("Not enough credits! You need 20 credits to regenerate.");
+      navigate("/pricing");
+      return;
+    }
+    
+    // Regenerate with current customization settings
+    setIsGenerating(true);
+    setBuildProgress(0);
+    setBuildComplete(false);
+    setGeneratedApp(null);
+    
+    toast.info("Regenerating app with your customizations... This will use 20 credits.");
+    
+    const requirements = {
+      name: appName,
+      type: detectedAppType,
+      framework: selectedFramework,
+      features: selectedFeatures,
+      colorTheme: previewTheme,
+      screens: selectedScreens,
+    };
+    
+    const stepMapping: Record<string, number> = {
+      structure: 0,
+      frontend: 2,
+      backend: 3,
+      database: 3,
+      preview: 4,
+      complete: 4,
+    };
+
+    try {
+      const result = await generateApp(requirements, (progress: GenerationProgress) => {
+        setBuildProgress(progress.progress);
+        const stepIndex = stepMapping[progress.step] ?? 0;
+        setBuildSteps((prev) =>
+          prev.map((step, idx) => ({
+            ...step,
+            status: idx < stepIndex ? "completed" : idx === stepIndex ? "active" : "pending",
+          }))
+        );
+      });
+
+      setGeneratedApp(result);
+      setBuildSteps((prev) =>
+        prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
+      );
+      setBuildProgress(100);
+      setIsGenerating(false);
+      setBuildComplete(true);
+      
+      refetchCredits();
+      toast.success("App regenerated successfully! 20 credits deducted.");
+    } catch (error) {
+      console.error("Regeneration error:", error);
+      setIsGenerating(false);
+      toast.error("Failed to regenerate. Please try again.");
     }
   };
 
@@ -268,7 +358,7 @@ const Builder = () => {
     return null;
   };
 
-  const handleDownloadCode = (type: 'frontend' | 'backend' | 'all') => {
+  const handleDownloadCode = (type: 'frontend' | 'backend' | 'database' | 'all') => {
     if (!generatedApp) return;
     
     let content = '';
@@ -276,13 +366,16 @@ const Builder = () => {
     
     if (type === 'frontend') {
       content = generatedApp.reactNativeCode;
-      filename = 'react-native-app.txt';
+      filename = `${appName}-react-native.txt`;
     } else if (type === 'backend') {
       content = generatedApp.backendCode;
-      filename = 'nodejs-backend.txt';
+      filename = `${appName}-backend.txt`;
+    } else if (type === 'database') {
+      content = generatedApp.databaseSchema;
+      filename = `${appName}-database.sql`;
     } else {
       content = `${generatedApp.reactNativeCode}\n\n${generatedApp.backendCode}\n\n-- DATABASE SCHEMA --\n${generatedApp.databaseSchema}`;
-      filename = 'full-app-code.txt';
+      filename = `${appName}-complete.txt`;
     }
     
     const blob = new Blob([content], { type: 'text/plain' });
@@ -295,7 +388,7 @@ const Builder = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast.success(`${type === 'all' ? 'Full code' : type === 'frontend' ? 'React Native code' : 'Backend code'} downloaded!`);
+    toast.success(`${type === 'all' ? 'Complete package' : type} downloaded!`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -344,30 +437,20 @@ const Builder = () => {
               size="sm"
               className="gap-2"
               disabled={!buildComplete}
-              onClick={() => handleDownloadCode('frontend')}
-            >
-              <Code className="w-4 h-4" />
-              <span className="hidden sm:inline">RN Code</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2"
-              disabled={!buildComplete}
-              onClick={() => handleDownloadCode('backend')}
+              onClick={() => setShowDownloadModal(true)}
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Backend</span>
+              <span className="hidden sm:inline">Download</span>
             </Button>
             <Button 
               variant="outline" 
               size="sm"
               className="gap-2"
               disabled={!buildComplete}
-              onClick={() => toast.success("IPA download started!")}
+              onClick={() => setShowCustomization(!showCustomization)}
             >
-              <Apple className="w-4 h-4" />
-              <span className="hidden sm:inline">IPA</span>
+              {showCustomization ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              <span className="hidden sm:inline">Customize</span>
             </Button>
             <Button 
               variant="outline" 
@@ -386,7 +469,7 @@ const Builder = () => {
               disabled={!buildComplete}
               onClick={() => toast.info("Publishing to App Store...")}
             >
-              <Rocket className="w-4 h-4" />
+              <Apple className="w-4 h-4" />
               <span className="hidden md:inline">App Store</span>
             </Button>
           </div>
@@ -396,7 +479,7 @@ const Builder = () => {
       {/* Main content */}
       <main className="flex-1 flex overflow-hidden">
         {/* Left - Chat Panel */}
-        <div className="flex-1 flex flex-col border-r border-border/50">
+        <div className="flex-1 flex flex-col border-r border-border/50 min-w-0">
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 ? (
@@ -496,6 +579,16 @@ const Builder = () => {
             )}
           </div>
 
+          {/* Code Tabs (shown after build) */}
+          {buildComplete && (
+            <CodeTabs
+              generatedApp={generatedApp}
+              appName={appName}
+              isGenerating={isGenerating}
+              onDownload={handleDownloadCode}
+            />
+          )}
+
           {/* Input area */}
           <div className="p-4 border-t border-border/50">
             <form onSubmit={handleSubmit} className="relative">
@@ -539,13 +632,13 @@ const Builder = () => {
           </div>
         </div>
 
-        {/* Right - Phone Preview */}
+        {/* Center - Phone Preview */}
         <div className="w-auto flex items-start justify-center p-6 bg-muted/20 overflow-y-auto">
           <AppPreview
             appType={detectedAppType}
-            appName={extractAppName(messages.filter(m => m.type === "user").map(m => m.content).join(" ")) || "MyApp"}
+            appName={appName}
             theme={previewTheme}
-            features={['login', 'payment', 'search', 'favorites']}
+            features={selectedFeatures}
             currentScreen={previewScreen}
             onScreenChange={setPreviewScreen}
             isGenerating={isGenerating}
@@ -553,6 +646,23 @@ const Builder = () => {
             showSettings={buildComplete}
           />
         </div>
+
+        {/* Right - Customization Panel */}
+        {showCustomization && buildComplete && (
+          <CustomizationPanel
+            appName={appName}
+            onAppNameChange={setAppName}
+            theme={previewTheme}
+            onThemeChange={setPreviewTheme}
+            features={selectedFeatures}
+            onFeaturesChange={setSelectedFeatures}
+            screens={selectedScreens}
+            onScreensChange={setSelectedScreens}
+            appType={detectedAppType}
+            onRegenerate={handleRegenerate}
+            isRegenerating={isGenerating}
+          />
+        )}
       </main>
 
       {/* Framework Selection Modal */}
@@ -561,6 +671,14 @@ const Builder = () => {
         onOpenChange={setShowFrameworkModal}
         onConfirm={handleStartBuild}
         creditsRequired={20}
+      />
+
+      {/* Download Modal */}
+      <DownloadModal
+        open={showDownloadModal}
+        onOpenChange={setShowDownloadModal}
+        generatedApp={generatedApp}
+        appName={appName}
       />
     </div>
   );
