@@ -71,7 +71,7 @@ const Pricing = () => {
                 <span className="text-2xl font-semibold">5 Credits</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2 ml-11">
-                Included on sign up
+                Included on sign up (enough for 1 app)
               </p>
             </div>
 
@@ -125,7 +125,7 @@ const Pricing = () => {
                 <span className="text-2xl font-semibold">100 Credits</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2 ml-11">
-                ₹20 per credit
+                Build up to 5 apps (20 credits/app)
               </p>
             </div>
 
@@ -153,6 +153,25 @@ const Pricing = () => {
             >
               Get Pro
             </Button>
+          </div>
+        </div>
+
+        {/* Credits Info */}
+        <div className="mt-12 p-6 rounded-2xl border border-border bg-card/50 max-w-3xl mx-auto">
+          <h3 className="text-lg font-semibold text-foreground mb-4 text-center">How Credits Work</h3>
+          <div className="grid md:grid-cols-3 gap-6 text-center">
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">20</div>
+              <p className="text-sm text-muted-foreground">Credits per app build</p>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">5</div>
+              <p className="text-sm text-muted-foreground">Free credits on signup</p>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">₹20</div>
+              <p className="text-sm text-muted-foreground">Per credit (Pro plan)</p>
+            </div>
           </div>
         </div>
 
