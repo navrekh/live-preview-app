@@ -6,63 +6,102 @@
 
 @layer base {
   :root {
-    --background: 220 15% 5%;
-    --foreground: 210 20% 98%;
+    --background: 240 20% 98%;
+    --foreground: 240 10% 10%;
 
-    --card: 220 15% 8%;
-    --card-foreground: 210 20% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
 
-    --popover: 220 15% 8%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
 
-    --primary: 190 95% 55%;
-    --primary-foreground: 220 15% 5%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 240 10% 94%;
+    --secondary-foreground: 240 10% 20%;
 
-    --muted: 220 15% 12%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 240 10% 96%;
+    --muted-foreground: 240 5% 45%;
 
-    --accent: 260 90% 65%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 340 82% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 15%;
-    --ring: 190 95% 55%;
+    --border: 240 10% 90%;
+    --input: 240 10% 94%;
+    --ring: 262 83% 58%;
 
     --radius: 0.75rem;
 
     /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(190 95% 55%), hsl(260 90% 65%));
-    --gradient-subtle: linear-gradient(180deg, hsl(220 15% 10%), hsl(220 15% 5%));
-    --gradient-card: linear-gradient(145deg, hsl(220 15% 10%), hsl(220 15% 6%));
-    --gradient-glow: radial-gradient(ellipse at center, hsl(190 95% 55% / 0.15), transparent 70%);
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(340 82% 60%));
+    --gradient-subtle: linear-gradient(180deg, hsl(240 20% 98%), hsl(240 15% 95%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(240 10% 98%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(262 83% 58% / 0.12), transparent 70%);
     
-    --shadow-glow: 0 0 60px hsl(190 95% 55% / 0.3);
-    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
-    --shadow-elevated: 0 20px 60px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 60px hsl(262 83% 58% / 0.25);
+    --shadow-card: 0 4px 24px hsl(240 10% 10% / 0.08);
+    --shadow-elevated: 0 12px 40px hsl(240 10% 10% / 0.12);
     
-    --phone-frame: 220 15% 12%;
-    --phone-screen: 220 20% 4%;
-    --phone-notch: 220 15% 8%;
+    --phone-frame: 240 10% 20%;
+    --phone-screen: 240 15% 12%;
+    --phone-notch: 240 10% 8%;
 
-    --sidebar-background: 220 15% 6%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 190 95% 55%;
-    --sidebar-primary-foreground: 220 15% 5%;
-    --sidebar-accent: 220 15% 12%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 220 15% 15%;
-    --sidebar-ring: 190 95% 55%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 20%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 96%;
+    --sidebar-accent-foreground: 240 10% 20%;
+    --sidebar-border: 240 10% 90%;
+    --sidebar-ring: 262 83% 58%;
   }
 
   .dark {
-    --background: 220 15% 5%;
-    --foreground: 210 20% 98%;
+    --background: 240 15% 8%;
+    --foreground: 240 10% 98%;
+    
+    --card: 240 15% 12%;
+    --card-foreground: 240 10% 98%;
+    
+    --popover: 240 15% 12%;
+    --popover-foreground: 240 10% 98%;
+    
+    --primary: 262 83% 65%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 12% 18%;
+    --secondary-foreground: 240 10% 90%;
+    
+    --muted: 240 12% 15%;
+    --muted-foreground: 240 8% 55%;
+    
+    --accent: 340 82% 65%;
+    --accent-foreground: 0 0% 100%;
+    
+    --border: 240 12% 20%;
+    --input: 240 12% 18%;
+    --ring: 262 83% 65%;
+    
+    --shadow-glow: 0 0 60px hsl(262 83% 65% / 0.3);
+    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 20px 60px hsl(0 0% 0% / 0.5);
+    
+    --phone-frame: 240 12% 15%;
+    --phone-screen: 240 15% 6%;
+    --phone-notch: 240 12% 10%;
+
+    --sidebar-background: 240 15% 10%;
+    --sidebar-foreground: 240 10% 90%;
+    --sidebar-primary: 262 83% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 12% 15%;
+    --sidebar-accent-foreground: 240 10% 90%;
+    --sidebar-border: 240 12% 18%;
+    --sidebar-ring: 262 83% 65%;
   }
 }
 
@@ -104,7 +143,7 @@
   }
 
   .glass {
-    @apply bg-card/50 backdrop-blur-xl;
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
   }
 
   .glow {
@@ -113,9 +152,9 @@
 
   .phone-glow {
     box-shadow: 
-      0 0 80px hsl(190 95% 55% / 0.2),
-      0 0 120px hsl(260 90% 65% / 0.1),
-      0 40px 80px hsl(0 0% 0% / 0.5);
+      0 0 80px hsl(262 83% 58% / 0.15),
+      0 0 120px hsl(340 82% 60% / 0.08),
+      0 40px 80px hsl(240 10% 10% / 0.25);
   }
 
   .animate-float {
