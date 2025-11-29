@@ -31,7 +31,15 @@ const Index = () => {
               variant="ghost" 
               size="sm" 
               className="text-muted-foreground"
-              onClick={() => window.location.href = "/dashboard"}
+              onClick={() => navigate("/pricing")}
+            >
+              Pricing
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground"
+              onClick={() => navigate("/dashboard")}
             >
               Dashboard
               <ChevronRight className="w-4 h-4 ml-1" />
@@ -39,7 +47,7 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => window.location.href = "/signin"}
+              onClick={() => navigate("/signin")}
             >
               Sign In
             </Button>
