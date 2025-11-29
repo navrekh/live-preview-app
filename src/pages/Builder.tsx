@@ -10,7 +10,8 @@ import {
   FileUp,
   Rocket,
   Loader2,
-  Sparkles
+  Sparkles,
+  Code
 } from "lucide-react";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
@@ -21,6 +22,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sendChatMessage, ChatMessage, ChatResponse } from "@/services/chat";
 import { useCredits } from "@/hooks/useCredits";
+import { 
+  generateApp, 
+  parseConversationToRequirements,
+  GeneratedApp,
+  GenerationProgress 
+} from "@/services/generator";
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -50,11 +57,11 @@ const Builder = () => {
   const [isSending, setIsSending] = useState(false);
   const [buildProgress, setBuildProgress] = useState(0);
   const [buildSteps, setBuildSteps] = useState<BuildStep[]>([
-    { id: "analyze", label: "Analyzing prompt", status: "pending" },
-    { id: "schema", label: "Generating app schema", status: "pending" },
-    { id: "ui", label: "Creating UI components", status: "pending" },
-    { id: "backend", label: "Setting up backend", status: "pending" },
-    { id: "build", label: "Building APK/IPA", status: "pending" },
+    { id: "analyze", label: "Analyzing requirements", status: "pending" },
+    { id: "structure", label: "Creating project structure", status: "pending" },
+    { id: "frontend", label: "Generating React Native code", status: "pending" },
+    { id: "backend", label: "Setting up Node.js backend", status: "pending" },
+    { id: "preview", label: "Preparing live preview", status: "pending" },
   ]);
   const [buildComplete, setBuildComplete] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -62,6 +69,7 @@ const Builder = () => {
   const [readyToBuild, setReadyToBuild] = useState(false);
   const [showFrameworkModal, setShowFrameworkModal] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<"react-native" | "flutter" | null>(null);
+  const [generatedApp, setGeneratedApp] = useState<GeneratedApp | null>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -131,63 +139,130 @@ const Builder = () => {
     setBuildProgress(0);
     setBuildComplete(false);
     setReadyToBuild(false);
+    setGeneratedApp(null);
     
     const frameworkName = framework === "react-native" ? "React Native" : "Flutter";
     toast.info(`Starting ${frameworkName} app generation with Node.js backend... This will use 20 credits.`);
 
-    const stepDurations = [2000, 3000, 4000, 3000, 3000];
-    let currentProgress = 0;
+    // Gather conversation for requirements parsing
+    const conversationText = messages
+      .filter(m => m.type === "user")
+      .map(m => m.content)
+      .join(" ");
 
-    for (let i = 0; i < buildSteps.length; i++) {
+    // Parse requirements from conversation
+    const appName = extractAppName(conversationText) || "MyApp";
+    const requirements = parseConversationToRequirements(conversationText, appName, framework);
+
+    const stepMapping: Record<string, number> = {
+      structure: 0,
+      frontend: 2,
+      backend: 3,
+      database: 3,
+      preview: 4,
+      complete: 4,
+    };
+
+    try {
+      // Generate the app with progress updates
+      const result = await generateApp(requirements, (progress: GenerationProgress) => {
+        setBuildProgress(progress.progress);
+        
+        // Update build steps based on current step
+        const stepIndex = stepMapping[progress.step] ?? 0;
+        setBuildSteps((prev) =>
+          prev.map((step, idx) => ({
+            ...step,
+            status: idx < stepIndex ? "completed" : idx === stepIndex ? "active" : "pending",
+          }))
+        );
+
+        // Add progress message
+        if (progress.step !== 'complete') {
+          const systemMessage: Message = {
+            id: `step-${progress.step}-${Date.now()}`,
+            type: "assistant",
+            content: `⚙️ ${progress.message}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, systemMessage]);
+        }
+      });
+
+      setGeneratedApp(result);
+
       setBuildSteps((prev) =>
-        prev.map((step, idx) => ({
-          ...step,
-          status: idx === i ? "active" : idx < i ? "completed" : "pending",
-        }))
+        prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
       );
-
-      const systemMessage: Message = {
-        id: `step-${i}-${Date.now()}`,
+      setBuildProgress(100);
+      setIsGenerating(false);
+      setBuildComplete(true);
+      
+      const completeMessage: Message = {
+        id: `complete-${Date.now()}`,
         type: "assistant",
-        content: `⚙️ ${buildSteps[i].label}...`,
+        content: `🎉 **Your ${appName} app is ready!**\n\n**Generated:**\n- ${result.files.filter(f => f.type !== 'backend').length} React Native files\n- ${result.files.filter(f => f.type === 'backend').length} Node.js backend files\n- Database schema\n\nYou can now download the code or publish to app stores. Use the buttons in the header to proceed.`,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, systemMessage]);
-
-      const progressIncrement = 100 / buildSteps.length;
-      const stepDuration = stepDurations[i];
-      const incrementPerTick = progressIncrement / (stepDuration / 100);
-
-      await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          currentProgress += incrementPerTick;
-          if (currentProgress >= (i + 1) * progressIncrement) {
-            clearInterval(interval);
-            resolve();
-          }
-          setBuildProgress(Math.min(Math.round(currentProgress), 100));
-        }, 100);
-      });
+      setMessages((prev) => [...prev, completeMessage]);
+      
+      // Deduct credits
+      refetchCredits();
+      toast.success("Your app is ready! 20 credits deducted.");
+    } catch (error) {
+      console.error("App generation error:", error);
+      setIsGenerating(false);
+      setBuildSteps((prev) =>
+        prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
+      );
+      toast.error("Failed to generate app. Please try again.");
     }
+  };
 
-    setBuildSteps((prev) =>
-      prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-    );
-    setBuildProgress(100);
-    setIsGenerating(false);
-    setBuildComplete(true);
+  // Helper to extract app name from conversation
+  const extractAppName = (text: string): string | null => {
+    const patterns = [
+      /(?:called|named|name it|app name[:\s]+)["']?([A-Za-z][A-Za-z0-9\s]{1,30})["']?/i,
+      /(?:build|create|make)\s+(?:a|an)?\s*["']?([A-Za-z][A-Za-z0-9\s]{1,30})["']?\s+app/i,
+    ];
     
-    const completeMessage: Message = {
-      id: `complete-${Date.now()}`,
-      type: "assistant",
-      content: "🎉 **Your app is ready!**\n\nYou can now download the APK/IPA or publish directly to the app stores. Use the buttons in the header to proceed.",
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, completeMessage]);
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        return match[1].trim();
+      }
+    }
+    return null;
+  };
+
+  const handleDownloadCode = (type: 'frontend' | 'backend' | 'all') => {
+    if (!generatedApp) return;
     
-    // Deduct credits
-    refetchCredits();
-    toast.success("Your app is ready! 20 credits deducted.");
+    let content = '';
+    let filename = '';
+    
+    if (type === 'frontend') {
+      content = generatedApp.reactNativeCode;
+      filename = 'react-native-app.txt';
+    } else if (type === 'backend') {
+      content = generatedApp.backendCode;
+      filename = 'nodejs-backend.txt';
+    } else {
+      content = `${generatedApp.reactNativeCode}\n\n${generatedApp.backendCode}\n\n-- DATABASE SCHEMA --\n${generatedApp.databaseSchema}`;
+      filename = 'full-app-code.txt';
+    }
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`${type === 'all' ? 'Full code' : type === 'frontend' ? 'React Native code' : 'Backend code'} downloaded!`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -236,10 +311,20 @@ const Builder = () => {
               size="sm"
               className="gap-2"
               disabled={!buildComplete}
-              onClick={() => toast.success("APK download started!")}
+              onClick={() => handleDownloadCode('frontend')}
+            >
+              <Code className="w-4 h-4" />
+              <span className="hidden sm:inline">RN Code</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={() => handleDownloadCode('backend')}
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">APK</span>
+              <span className="hidden sm:inline">Backend</span>
             </Button>
             <Button 
               variant="outline" 
