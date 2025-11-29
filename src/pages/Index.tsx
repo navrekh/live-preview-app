@@ -1,18 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   ShoppingBag, 
   MessageSquare, 
   Calendar, 
   Utensils,
   Download,
-  Zap,
-  ArrowRight
+  Sparkles,
+  ChevronRight
 } from "lucide-react";
-import Sidebar from "@/components/Sidebar";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import ChatInput from "@/components/ChatInput";
 import BuildProgress from "@/components/BuildProgress";
-import TemplateCard from "@/components/TemplateCard";
 import PreviewScreen from "@/components/PreviewScreen";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -26,8 +24,6 @@ interface BuildStep {
 }
 
 const Index = () => {
-  const [activeSection, setActiveSection] = useState("create");
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [buildProgress, setBuildProgress] = useState(0);
   const [buildSteps, setBuildSteps] = useState<BuildStep[]>([
@@ -39,37 +35,6 @@ const Index = () => {
   ]);
   const [showPreview, setShowPreview] = useState(false);
 
-  const templates = [
-    {
-      id: "ecommerce",
-      title: "E-Commerce",
-      description: "Shopping app with cart & payments",
-      icon: <ShoppingBag className="w-6 h-6 text-primary-foreground" />,
-      gradient: "bg-gradient-to-br from-primary to-accent",
-    },
-    {
-      id: "social",
-      title: "Social Media",
-      description: "Feed, profiles & messaging",
-      icon: <MessageSquare className="w-6 h-6 text-primary-foreground" />,
-      gradient: "bg-gradient-to-br from-accent to-primary",
-    },
-    {
-      id: "booking",
-      title: "Booking App",
-      description: "Appointments & scheduling",
-      icon: <Calendar className="w-6 h-6 text-primary-foreground" />,
-      gradient: "bg-gradient-to-br from-primary/80 to-accent/80",
-    },
-    {
-      id: "food",
-      title: "Food Delivery",
-      description: "Restaurant ordering system",
-      icon: <Utensils className="w-6 h-6 text-primary-foreground" />,
-      gradient: "bg-gradient-to-br from-accent/80 to-primary/80",
-    },
-  ];
-
   const handlePromptSubmit = async (message: string) => {
     setIsGenerating(true);
     setShowPreview(true);
@@ -77,7 +42,6 @@ const Index = () => {
     
     toast.info("Starting app generation...");
 
-    // Simulate build process
     const stepDurations = [2000, 3000, 4000, 3000, 3000];
     let currentProgress = 0;
 
@@ -111,7 +75,7 @@ const Index = () => {
     setBuildProgress(100);
     setIsGenerating(false);
     
-    toast.success("Your app is ready! 🎉");
+    toast.success("Your app is ready!");
   };
 
   const resetBuild = () => {
@@ -124,47 +88,43 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/50 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-lg text-foreground">MobileDev</span>
+          </div>
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            Dashboard
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </header>
 
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left panel - Chat & Controls */}
-        <div className="flex-1 flex flex-col p-6 lg:p-8 overflow-auto">
-          {/* Header */}
-          <header className="mb-8 animate-slide-up">
-            <h1 className="text-3xl lg:text-4xl font-bold mb-2">
-              <span className="gradient-text">Build Mobile Apps</span>
-              <br />
-              <span className="text-foreground">with AI</span>
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Describe your app idea and watch it come to life
-            </p>
-          </header>
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          
+          {/* Left - Content */}
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+                <span className="gradient-text">Build Mobile Apps</span>
+                <br />
+                <span className="text-foreground">with AI</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-md">
+                Describe your app idea and get a real APK or IPA in minutes. No coding required.
+              </p>
+            </div>
 
-          {/* Templates */}
-          {!isGenerating && !showPreview && (
-            <section className="mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-                Quick Start Templates
-              </h2>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {templates.map((template) => (
-                  <TemplateCard
-                    key={template.id}
-                    {...template}
-                    isSelected={selectedTemplate === template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Build Progress */}
-          {(isGenerating || showPreview) && (
-            <section className="mb-8 animate-fade-in">
-              <div className="p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-sm">
+            {/* Build Progress */}
+            {(isGenerating || showPreview) && (
+              <div className="p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-sm animate-fade-in">
                 <BuildProgress
                   steps={buildSteps}
                   progress={buildProgress}
@@ -177,44 +137,29 @@ const Index = () => {
                       <Download className="w-4 h-4" />
                       Download APK
                     </Button>
-                    <Button variant="glass" className="gap-2">
-                      <Download className="w-4 h-4" />
-                      Download IPA
-                    </Button>
                     <Button variant="outline" onClick={resetBuild}>
-                      Create New App
+                      New App
                     </Button>
                   </div>
                 )}
               </div>
-            </section>
-          )}
+            )}
 
-          {/* Chat Input */}
-          <div className="mt-auto animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            {/* Chat Input */}
             <ChatInput
               onSubmit={handlePromptSubmit}
               isLoading={isGenerating}
-              placeholder={
-                selectedTemplate
-                  ? `Describe your ${templates.find((t) => t.id === selectedTemplate)?.title} app...`
-                  : "Describe your app idea... e.g., 'Build a salon booking app with appointment scheduling and online payments'"
-              }
+              placeholder="Describe your app... e.g., 'Build a salon booking app with payments'"
             />
 
             {/* Quick prompts */}
             {!isGenerating && !showPreview && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="text-xs text-muted-foreground mr-2">Try:</span>
-                {[
-                  "Salon booking app",
-                  "Food delivery app",
-                  "Fitness tracker",
-                ].map((prompt) => (
+              <div className="flex flex-wrap gap-2">
+                {["Salon booking", "Food delivery", "Fitness tracker"].map((prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => handlePromptSubmit(prompt)}
-                    className="text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                    onClick={() => handlePromptSubmit(prompt + " app")}
+                    className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
                   >
                     {prompt}
                   </button>
@@ -222,35 +167,15 @@ const Index = () => {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Right panel - Phone Preview */}
-        <div className="hidden lg:flex flex-col items-center justify-center w-[420px] border-l border-border bg-gradient-subtle p-8">
-          <PhoneSimulator
-            isGenerating={isGenerating}
-            content={
-              <PreviewScreen
-                template={showPreview || selectedTemplate ? "ecommerce" : "empty"}
-              />
-            }
-          />
-
-          {/* Stats */}
-          <div className="mt-8 flex items-center gap-6 text-center">
-            <div>
-              <p className="text-2xl font-bold gradient-text">50K+</p>
-              <p className="text-xs text-muted-foreground">Apps Built</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div>
-              <p className="text-2xl font-bold gradient-text">2min</p>
-              <p className="text-xs text-muted-foreground">Avg Build</p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div>
-              <p className="text-2xl font-bold gradient-text">100%</p>
-              <p className="text-xs text-muted-foreground">No-Code</p>
-            </div>
+          {/* Right - Phone Preview */}
+          <div className="hidden lg:flex justify-center">
+            <PhoneSimulator
+              isGenerating={isGenerating}
+              content={
+                <PreviewScreen template={showPreview ? "ecommerce" : "empty"} />
+              }
+            />
           </div>
         </div>
       </main>
