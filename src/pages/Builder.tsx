@@ -13,9 +13,8 @@ import {
   Sparkles,
   Code
 } from "lucide-react";
-import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
-import PreviewScreen from "@/components/PreviewScreen";
+import { AppPreview } from "@/components/preview";
 import Logo from "@/components/Logo";
 import FrameworkSelectModal from "@/components/FrameworkSelectModal";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,11 @@ import { useCredits } from "@/hooks/useCredits";
 import { 
   generateApp, 
   parseConversationToRequirements,
+  detectAppType,
   GeneratedApp,
   GenerationProgress 
 } from "@/services/generator";
+import { AppType } from "@/services/generator/types";
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -70,6 +71,13 @@ const Builder = () => {
   const [showFrameworkModal, setShowFrameworkModal] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<"react-native" | "flutter" | null>(null);
   const [generatedApp, setGeneratedApp] = useState<GeneratedApp | null>(null);
+  const [previewScreen, setPreviewScreen] = useState("splash");
+  const [detectedAppType, setDetectedAppType] = useState<"food-delivery" | "ecommerce" | "social" | "booking" | "fitness" | "travel" | "education" | "healthcare">("ecommerce");
+  const [previewTheme, setPreviewTheme] = useState({
+    primary: '#3F51B5',
+    secondary: '#FF4081',
+    accent: '#00BCD4',
+  });
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -120,6 +128,26 @@ const Builder = () => {
       if (response.readyToBuild) {
         setReadyToBuild(true);
       }
+
+      // Auto-detect app type from conversation to update preview
+      const allUserMessages = [...messages, userMessage].filter(m => m.type === "user").map(m => m.content).join(" ");
+      const detected = detectAppType(allUserMessages) as AppType;
+      if (detected) {
+        setDetectedAppType(detected);
+        // Update theme based on app type
+        const themesByType: Record<string, { primary: string; secondary: string; accent: string }> = {
+          'food-delivery': { primary: '#FF5722', secondary: '#FFC107', accent: '#4CAF50' },
+          'ecommerce': { primary: '#3F51B5', secondary: '#FF4081', accent: '#00BCD4' },
+          'social': { primary: '#E91E63', secondary: '#9C27B0', accent: '#03A9F4' },
+          'booking': { primary: '#009688', secondary: '#FF9800', accent: '#2196F3' },
+          'fitness': { primary: '#8BC34A', secondary: '#FF5722', accent: '#00BCD4' },
+          'travel': { primary: '#2196F3', secondary: '#FF9800', accent: '#4CAF50' },
+          'education': { primary: '#673AB7', secondary: '#FF5722', accent: '#4CAF50' },
+          'healthcare': { primary: '#00BCD4', secondary: '#4CAF50', accent: '#FF9800' },
+        };
+        setPreviewTheme(themesByType[detected] || themesByType['ecommerce']);
+        setPreviewScreen('home');
+      }
     } catch (error) {
       toast.error("Failed to send message. Please try again.");
     } finally {
@@ -153,6 +181,11 @@ const Builder = () => {
     // Parse requirements from conversation
     const appName = extractAppName(conversationText) || "MyApp";
     const requirements = parseConversationToRequirements(conversationText, appName, framework);
+    
+    // Update preview state
+    setDetectedAppType(requirements.type);
+    setPreviewTheme(requirements.colorTheme);
+    setPreviewScreen("splash");
 
     const stepMapping: Record<string, number> = {
       structure: 0,
@@ -507,12 +540,17 @@ const Builder = () => {
         </div>
 
         {/* Right - Phone Preview */}
-        <div className="w-[400px] flex items-center justify-center p-8 bg-muted/20">
-          <PhoneSimulator
+        <div className="w-auto flex items-start justify-center p-6 bg-muted/20 overflow-y-auto">
+          <AppPreview
+            appType={detectedAppType}
+            appName={extractAppName(messages.filter(m => m.type === "user").map(m => m.content).join(" ")) || "MyApp"}
+            theme={previewTheme}
+            features={['login', 'payment', 'search', 'favorites']}
+            currentScreen={previewScreen}
+            onScreenChange={setPreviewScreen}
             isGenerating={isGenerating}
-            content={
-              <PreviewScreen template={buildComplete ? "ecommerce" : messages.length > 0 ? "loading" : "empty"} />
-            }
+            showNavigator={buildComplete || messages.length > 2}
+            showSettings={buildComplete}
           />
         </div>
       </main>
