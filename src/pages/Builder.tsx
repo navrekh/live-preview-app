@@ -5,7 +5,11 @@ import {
   Download,
   Sparkles,
   Send,
-  Paperclip
+  Paperclip,
+  Apple,
+  Play,
+  FileUp,
+  Rocket
 } from "lucide-react";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
@@ -142,8 +146,8 @@ const Builder = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border/50 px-6 py-4 shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="border-b border-border/50 px-4 py-3 shrink-0">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -160,12 +164,59 @@ const Builder = () => {
               <span className="font-semibold text-lg text-foreground">MobileDev</span>
             </div>
           </div>
-          {buildComplete && (
-            <Button variant="gradient" className="gap-2">
-              <Download className="w-4 h-4" />
-              Download APK
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              onClick={() => toast.info("Import from Figma coming soon!")}
+            >
+              <FileUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Import Figma</span>
             </Button>
-          )}
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={() => toast.success("APK download started!")}
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">APK</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={() => toast.success("IPA download started!")}
+            >
+              <Apple className="w-4 h-4" />
+              <span className="hidden sm:inline">IPA</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={() => toast.info("Publishing to Play Store...")}
+            >
+              <Play className="w-4 h-4" />
+              <span className="hidden md:inline">Play Store</span>
+            </Button>
+            <Button 
+              variant="gradient" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={() => toast.info("Publishing to App Store...")}
+            >
+              <Rocket className="w-4 h-4" />
+              <span className="hidden md:inline">App Store</span>
+            </Button>
+          </div>
         </div>
       </header>
 
