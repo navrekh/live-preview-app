@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import Logo from "@/components/Logo";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +21,10 @@ const SignIn = () => {
     setIsLoading(true);
     
     // TODO: Connect to AWS backend
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Set mock auth token for testing (remove when AWS backend is connected)
+      localStorage.setItem('auth_token', 'mock_token_' + Date.now());
+      await refreshUser();
       setIsLoading(false);
       toast.success("Signed in successfully!");
       navigate("/dashboard");

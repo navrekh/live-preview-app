@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getCurrentUser, isAuthenticated, signOut as authSignOut, User } from "@/services/auth";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { getCurrentUser, isAuthenticated as checkIsAuthenticated, signOut as authSignOut, User } from "@/services/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -14,16 +14,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(false);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
+      // Check if authenticated via token
+      const authenticated = checkIsAuthenticated();
+      setIsAuth(authenticated);
+      
+      if (authenticated) {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       console.error("Failed to get current user:", error);
       setUser(null);
+      setIsAuth(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -32,17 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     };
     initAuth();
-  }, []);
+  }, [refreshUser]);
 
   const signOut = async () => {
     await authSignOut();
     setUser(null);
+    setIsAuth(false);
   };
 
   const value: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: isAuthenticated(),
+    isAuthenticated: isAuth,
     signOut,
     refreshUser,
   };
