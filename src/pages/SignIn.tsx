@@ -34,7 +34,7 @@ const SignIn = () => {
             <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-primary-foreground" />
             </div>
-            <span className="font-bold text-2xl text-foreground">MobileDev</span>
+            <span className="font-bold text-2xl text-foreground">AppDev</span>
           </div>
           <h2 className="text-3xl font-bold text-foreground">
             Build mobile apps with the power of AI
@@ -53,7 +53,7 @@ const SignIn = () => {
               <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-xl text-foreground">MobileDev</span>
+              <span className="font-bold text-xl text-foreground">AppDev</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="text-muted-foreground mt-2">Sign in to your account</p>

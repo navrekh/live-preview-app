@@ -28,7 +28,7 @@ const Pricing = () => {
             <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg text-foreground">MobileDev</span>
+            <span className="font-semibold text-lg text-foreground">AppDev</span>
           </div>
           <Button 
             variant="outline" 

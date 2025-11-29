@@ -40,7 +40,7 @@ const ForgotPassword = () => {
             <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="font-bold text-2xl text-foreground">MobileDev</span>
+            <span className="font-bold text-2xl text-foreground">AppDev</span>
           </div>
 
           {!emailSent ? (
