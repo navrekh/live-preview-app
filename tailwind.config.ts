@@ -78,7 +78,7 @@ export default {
         glow: "var(--shadow-glow)",
         card: "var(--shadow-card)",
         elevated: "var(--shadow-elevated)",
-        phone: "0 0 80px hsl(190 95% 55% / 0.2), 0 0 120px hsl(260 90% 65% / 0.1), 0 40px 80px hsl(0 0% 0% / 0.5)",
+        phone: "0 0 80px hsl(262 83% 58% / 0.15), 0 0 120px hsl(340 82% 60% / 0.08), 0 40px 80px hsl(240 10% 10% / 0.25)",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
@@ -102,7 +102,7 @@ export default {
         },
         "pulse-glow": {
           "0%, 100%": { opacity: "1", boxShadow: "var(--shadow-glow)" },
-          "50%": { opacity: "0.8", boxShadow: "0 0 40px hsl(190 95% 55% / 0.4)" },
+          "50%": { opacity: "0.8", boxShadow: "0 0 40px hsl(262 83% 58% / 0.3)" },
         },
       },
       animation: {
