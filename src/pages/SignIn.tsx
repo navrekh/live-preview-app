@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
+import Logo from "@/components/Logo";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 const SignIn = () => {
@@ -30,12 +31,7 @@ const SignIn = () => {
       {/* Left - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 via-background to-accent/10 items-center justify-center p-12">
         <div className="max-w-md space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-2xl text-foreground">AppDev</span>
-          </div>
+          <Logo size="lg" />
           <h2 className="text-3xl font-bold text-foreground">
             Build mobile apps with the power of AI
           </h2>
@@ -49,11 +45,8 @@ const SignIn = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
-            <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-xl text-foreground">AppDev</span>
+            <div className="lg:hidden mb-6">
+              <Logo size="md" className="justify-center" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="text-muted-foreground mt-2">Sign in to your account</p>

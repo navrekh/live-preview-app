@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import Logo from "@/components/Logo";
+import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const ForgotPassword = () => {
@@ -36,11 +37,8 @@ const ForgotPassword = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-2xl text-foreground">AppDev</span>
+          <div className="mb-8">
+            <Logo size="lg" className="justify-center" />
           </div>
 
           {!emailSent ? (

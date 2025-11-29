@@ -1,11 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { 
-  Sparkles,
-  ChevronRight
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import ChatInput from "@/components/ChatInput";
 import PreviewScreen from "@/components/PreviewScreen";
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -20,12 +18,7 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border/50 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-lg text-foreground">AppDev</span>
-          </div>
+          <Logo size="sm" />
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
