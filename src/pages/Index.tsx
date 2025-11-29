@@ -1,90 +1,18 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
-  ShoppingBag, 
-  MessageSquare, 
-  Calendar, 
-  Utensils,
-  Download,
   Sparkles,
   ChevronRight
 } from "lucide-react";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import ChatInput from "@/components/ChatInput";
-import BuildProgress from "@/components/BuildProgress";
 import PreviewScreen from "@/components/PreviewScreen";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-
-type BuildStepStatus = "pending" | "active" | "completed";
-
-interface BuildStep {
-  id: string;
-  label: string;
-  status: BuildStepStatus;
-}
 
 const Index = () => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [buildProgress, setBuildProgress] = useState(0);
-  const [buildSteps, setBuildSteps] = useState<BuildStep[]>([
-    { id: "analyze", label: "Analyzing prompt", status: "pending" },
-    { id: "schema", label: "Generating app schema", status: "pending" },
-    { id: "ui", label: "Creating UI components", status: "pending" },
-    { id: "backend", label: "Setting up backend", status: "pending" },
-    { id: "build", label: "Building APK/IPA", status: "pending" },
-  ]);
-  const [showPreview, setShowPreview] = useState(false);
+  const navigate = useNavigate();
 
-  const handlePromptSubmit = async (message: string) => {
-    setIsGenerating(true);
-    setShowPreview(true);
-    setBuildProgress(0);
-    
-    toast.info("Starting app generation...");
-
-    const stepDurations = [2000, 3000, 4000, 3000, 3000];
-    let currentProgress = 0;
-
-    for (let i = 0; i < buildSteps.length; i++) {
-      setBuildSteps((prev) =>
-        prev.map((step, idx) => ({
-          ...step,
-          status: idx === i ? "active" : idx < i ? "completed" : "pending",
-        }))
-      );
-
-      const progressIncrement = 100 / buildSteps.length;
-      const stepDuration = stepDurations[i];
-      const incrementPerTick = progressIncrement / (stepDuration / 100);
-
-      await new Promise<void>((resolve) => {
-        const interval = setInterval(() => {
-          currentProgress += incrementPerTick;
-          if (currentProgress >= (i + 1) * progressIncrement) {
-            clearInterval(interval);
-            resolve();
-          }
-          setBuildProgress(Math.min(Math.round(currentProgress), 100));
-        }, 100);
-      });
-    }
-
-    setBuildSteps((prev) =>
-      prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-    );
-    setBuildProgress(100);
-    setIsGenerating(false);
-    
-    toast.success("Your app is ready!");
-  };
-
-  const resetBuild = () => {
-    setIsGenerating(false);
-    setShowPreview(false);
-    setBuildProgress(0);
-    setBuildSteps((prev) =>
-      prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
-    );
+  const handlePromptSubmit = (message: string) => {
+    navigate("/builder", { state: { prompt: message } });
   };
 
   return (
@@ -136,58 +64,33 @@ const Index = () => {
               </p>
             </div>
 
-            {/* Build Progress */}
-            {(isGenerating || showPreview) && (
-              <div className="p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-sm animate-fade-in">
-                <BuildProgress
-                  steps={buildSteps}
-                  progress={buildProgress}
-                  estimatedTime={isGenerating ? "~2 minutes" : undefined}
-                />
-
-                {!isGenerating && buildProgress === 100 && (
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Button variant="gradient" className="gap-2">
-                      <Download className="w-4 h-4" />
-                      Download APK
-                    </Button>
-                    <Button variant="outline" onClick={resetBuild}>
-                      New App
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Chat Input */}
             <ChatInput
               onSubmit={handlePromptSubmit}
-              isLoading={isGenerating}
+              isLoading={false}
               placeholder="Describe your app... e.g., 'Build a salon booking app with payments'"
             />
 
             {/* Quick prompts */}
-            {!isGenerating && !showPreview && (
-              <div className="flex flex-wrap gap-2">
-                {["Salon booking", "Food delivery", "Fitness tracker"].map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => handlePromptSubmit(prompt + " app")}
-                    className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {["Salon booking", "Food delivery", "Fitness tracker"].map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => handlePromptSubmit(prompt + " app")}
+                  className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Right - Phone Preview */}
           <div className="hidden lg:flex justify-center">
             <PhoneSimulator
-              isGenerating={isGenerating}
+              isGenerating={false}
               content={
-                <PreviewScreen template={showPreview ? "ecommerce" : "empty"} />
+                <PreviewScreen template="empty" />
               }
             />
           </div>
