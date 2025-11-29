@@ -63,12 +63,12 @@ const Index = () => {
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
-                <span className="gradient-text">Build Mobile Apps</span>
+                <span className="gradient-text">From Idea to App Store</span>
                 <br />
-                <span className="text-foreground">with AI</span>
+                <span className="text-foreground">in Minutes</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-md">
-                Describe your app idea and get a real APK or IPA in minutes. No coding required.
+                Just describe what you want. AI builds your mobile app and delivers a real APK or IPA — no coding needed.
               </p>
             </div>
 
