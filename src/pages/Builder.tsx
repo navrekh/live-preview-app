@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft,
@@ -8,7 +8,9 @@ import {
   Apple,
   Play,
   FileUp,
-  Rocket
+  Rocket,
+  Loader2,
+  Sparkles
 } from "lucide-react";
 import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
@@ -16,6 +18,8 @@ import PreviewScreen from "@/components/PreviewScreen";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { sendChatMessage, ChatMessage, ChatResponse } from "@/services/chat";
+import { useCredits } from "@/hooks/useCredits";
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -27,17 +31,22 @@ interface BuildStep {
 
 interface Message {
   id: string;
-  type: "user" | "system";
+  type: "user" | "assistant";
   content: string;
   timestamp: Date;
+  suggestedFeatures?: string[];
+  readyToBuild?: boolean;
 }
 
 const Builder = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialPrompt = location.state?.prompt || "";
   
+  const { balance, refetch: refetchCredits } = useCredits();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [buildProgress, setBuildProgress] = useState(0);
   const [buildSteps, setBuildSteps] = useState<BuildStep[]>([
     { id: "analyze", label: "Analyzing prompt", status: "pending" },
@@ -49,27 +58,77 @@ const Builder = () => {
   const [buildComplete, setBuildComplete] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [readyToBuild, setReadyToBuild] = useState(false);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     if (initialPrompt) {
-      handleGenerate(initialPrompt);
+      handleSendMessage(initialPrompt);
     }
   }, []);
 
-  const handleGenerate = async (prompt: string) => {
+  const handleSendMessage = async (content: string) => {
+    if (!content.trim() || isSending || isGenerating) return;
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
-      content: prompt,
+      content: content.trim(),
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
-    
+    setInputValue("");
+    setIsSending(true);
+
+    try {
+      // Convert messages to chat format
+      const chatHistory: ChatMessage[] = messages.map((m) => ({
+        id: m.id,
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content,
+        timestamp: m.timestamp,
+      }));
+
+      const response = await sendChatMessage(content, chatHistory);
+
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        type: "assistant",
+        content: response.message,
+        timestamp: new Date(),
+        suggestedFeatures: response.suggestedFeatures,
+        readyToBuild: response.readyToBuild,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      
+      if (response.readyToBuild) {
+        setReadyToBuild(true);
+      }
+    } catch (error) {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleStartBuild = async () => {
+    if (balance < 20) {
+      toast.error("Not enough credits! You need 20 credits to build an app.");
+      navigate("/pricing");
+      return;
+    }
+
     setIsGenerating(true);
     setBuildProgress(0);
     setBuildComplete(false);
+    setReadyToBuild(false);
     
-    toast.info("Starting app generation...");
+    toast.info("Starting app generation... This will use 20 credits.");
 
     const stepDurations = [2000, 3000, 4000, 3000, 3000];
     let currentProgress = 0;
@@ -82,11 +141,10 @@ const Builder = () => {
         }))
       );
 
-      // Add system message for current step
       const systemMessage: Message = {
         id: `step-${i}-${Date.now()}`,
-        type: "system",
-        content: `${buildSteps[i].label}...`,
+        type: "assistant",
+        content: `⚙️ ${buildSteps[i].label}...`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, systemMessage]);
@@ -116,31 +174,24 @@ const Builder = () => {
     
     const completeMessage: Message = {
       id: `complete-${Date.now()}`,
-      type: "system",
-      content: "Your app is ready! You can download the APK or continue customizing.",
+      type: "assistant",
+      content: "🎉 **Your app is ready!**\n\nYou can now download the APK/IPA or publish directly to the app stores. Use the buttons in the header to proceed.",
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, completeMessage]);
     
-    toast.success("Your app is ready!");
+    // Deduct credits
+    refetchCredits();
+    toast.success("Your app is ready! 20 credits deducted.");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isGenerating) return;
-    
-    handleGenerate(inputValue);
-    setInputValue("");
+    handleSendMessage(inputValue);
   };
 
-  const resetBuild = () => {
-    setIsGenerating(false);
-    setBuildProgress(0);
-    setBuildComplete(false);
-    setBuildSteps((prev) =>
-      prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
-    );
-    setMessages([]);
+  const handleFeatureClick = (feature: string) => {
+    setInputValue((prev) => prev ? `${prev}, ${feature}` : `I need ${feature}`);
   };
 
   return (
@@ -152,12 +203,16 @@ const Builder = () => {
             <Button 
               variant="ghost" 
               size="icon"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo size="sm" />
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
+              <Sparkles className="w-4 h-4" />
+              <span>{balance} credits</span>
+            </div>
           </div>
           
           {/* Action Buttons */}
@@ -223,42 +278,98 @@ const Builder = () => {
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 ? (
               <div className="h-full flex items-center justify-center">
-                <div className="text-center space-y-4">
+                <div className="text-center space-y-4 max-w-md">
                   <Logo size="xl" showText={false} className="justify-center" />
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Start Building</h2>
-                    <p className="text-muted-foreground mt-1">Describe your app idea to get started</p>
+                    <h2 className="text-xl font-semibold text-foreground">Let's Build Your App</h2>
+                    <p className="text-muted-foreground mt-2">
+                      Tell me about your app idea. I'll ask questions to understand your needs and help you create the perfect app.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center mt-4">
+                    {["E-commerce app", "Social media app", "Fitness tracker", "Food delivery"].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => setInputValue(`I want to build a ${suggestion.toLowerCase()}`)}
+                        className="px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-sm hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
             ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
-                >
+              <>
+                {messages.map((message) => (
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      message.type === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
-                    }`}
+                    key={message.id}
+                    className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                        message.type === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      
+                      {/* Suggested Features */}
+                      {message.suggestedFeatures && message.suggestedFeatures.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/30">
+                          {message.suggestedFeatures.map((feature) => (
+                            <button
+                              key={feature}
+                              onClick={() => handleFeatureClick(feature)}
+                              className="px-2 py-1 rounded-full bg-background/50 text-xs hover:bg-background transition-colors"
+                            >
+                              + {feature}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-            
-            {/* Build Progress */}
-            {isGenerating && (
-              <div className="p-4 rounded-2xl border border-border bg-card/50">
-                <BuildProgress
-                  steps={buildSteps}
-                  progress={buildProgress}
-                  estimatedTime="~2 minutes"
-                />
-              </div>
+                ))}
+                
+                {/* Typing indicator */}
+                {isSending && (
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-2xl px-4 py-3">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Build Progress */}
+                {isGenerating && (
+                  <div className="p-4 rounded-2xl border border-border bg-card/50">
+                    <BuildProgress
+                      steps={buildSteps}
+                      progress={buildProgress}
+                      estimatedTime="~2 minutes"
+                    />
+                  </div>
+                )}
+
+                {/* Ready to Build Button */}
+                {readyToBuild && !isGenerating && !buildComplete && (
+                  <div className="flex justify-center py-4">
+                    <Button
+                      variant="gradient"
+                      size="lg"
+                      className="gap-2"
+                      onClick={handleStartBuild}
+                    >
+                      <Rocket className="w-5 h-5" />
+                      Start Building (20 credits)
+                    </Button>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </>
             )}
           </div>
 
@@ -269,15 +380,17 @@ const Builder = () => {
                 <button
                   type="button"
                   className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => toast.info("File upload coming soon!")}
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
                 <textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Describe changes or new features..."
+                  placeholder={messages.length === 0 ? "Describe your app idea..." : "Continue the conversation..."}
                   className="flex-1 bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground min-h-[24px] max-h-[120px]"
                   rows={1}
+                  disabled={isSending || isGenerating}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -289,10 +402,14 @@ const Builder = () => {
                   type="submit"
                   size="icon"
                   variant="gradient"
-                  disabled={!inputValue.trim() || isGenerating}
+                  disabled={!inputValue.trim() || isSending || isGenerating}
                   className="shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  {isSending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
             </form>
@@ -304,7 +421,7 @@ const Builder = () => {
           <PhoneSimulator
             isGenerating={isGenerating}
             content={
-              <PreviewScreen template={messages.length > 0 ? "ecommerce" : "empty"} />
+              <PreviewScreen template={buildComplete ? "ecommerce" : messages.length > 0 ? "loading" : "empty"} />
             }
           />
         </div>
