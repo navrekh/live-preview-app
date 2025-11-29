@@ -16,6 +16,7 @@ import PhoneSimulator from "@/components/PhoneSimulator";
 import BuildProgress from "@/components/BuildProgress";
 import PreviewScreen from "@/components/PreviewScreen";
 import Logo from "@/components/Logo";
+import FrameworkSelectModal from "@/components/FrameworkSelectModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sendChatMessage, ChatMessage, ChatResponse } from "@/services/chat";
@@ -59,6 +60,8 @@ const Builder = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [readyToBuild, setReadyToBuild] = useState(false);
+  const [showFrameworkModal, setShowFrameworkModal] = useState(false);
+  const [selectedFramework, setSelectedFramework] = useState<"react-native" | "flutter" | null>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -116,19 +119,21 @@ const Builder = () => {
     }
   };
 
-  const handleStartBuild = async () => {
+  const handleStartBuild = async (framework: "react-native" | "flutter") => {
     if (balance < 20) {
       toast.error("Not enough credits! You need 20 credits to build an app.");
       navigate("/pricing");
       return;
     }
 
+    setSelectedFramework(framework);
     setIsGenerating(true);
     setBuildProgress(0);
     setBuildComplete(false);
     setReadyToBuild(false);
     
-    toast.info("Starting app generation... This will use 20 credits.");
+    const frameworkName = framework === "react-native" ? "React Native" : "Flutter";
+    toast.info(`Starting ${frameworkName} app generation with Node.js backend... This will use 20 credits.`);
 
     const stepDurations = [2000, 3000, 4000, 3000, 3000];
     let currentProgress = 0;
@@ -360,7 +365,7 @@ const Builder = () => {
                       variant="gradient"
                       size="lg"
                       className="gap-2"
-                      onClick={handleStartBuild}
+                      onClick={() => setShowFrameworkModal(true)}
                     >
                       <Rocket className="w-5 h-5" />
                       Start Building (20 credits)
@@ -426,6 +431,14 @@ const Builder = () => {
           />
         </div>
       </main>
+
+      {/* Framework Selection Modal */}
+      <FrameworkSelectModal
+        open={showFrameworkModal}
+        onOpenChange={setShowFrameworkModal}
+        onConfirm={handleStartBuild}
+        creditsRequired={20}
+      />
     </div>
   );
 };
