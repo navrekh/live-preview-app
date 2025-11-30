@@ -6,11 +6,8 @@ import {
   Send,
   Paperclip,
   FileUp,
-  Rocket,
   Loader2,
   Sparkles,
-  Code,
-  Settings,
   PanelRightClose,
   PanelRightOpen,
   ExternalLink,
@@ -23,21 +20,20 @@ import { AppPreview } from "@/components/preview";
 import { CodeTabs, CustomizationPanel, DownloadModal } from "@/components/builder";
 import ExpoPreview from "@/components/builder/ExpoPreview";
 import Logo from "@/components/Logo";
-import FrameworkSelectModal from "@/components/FrameworkSelectModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { sendChatMessage, ChatMessage, ChatResponse } from "@/services/chat";
 import { useCredits } from "@/hooks/useCredits";
 import { useConfetti } from "@/hooks/useConfetti";
-import { 
-  generateApp, 
-  parseConversationToRequirements,
-  detectAppType,
-  GeneratedApp,
-  GenerationProgress 
-} from "@/services/generator";
 import { AppType, FeatureType, ColorTheme } from "@/services/generator/types";
 import api from "@/services/api";
+
+interface GeneratedApp {
+  reactNativeCode: string;
+  backendCode: string;
+  databaseSchema: string;
+  previewUrl: string;
+  files: any[];
+}
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -65,7 +61,6 @@ const Builder = () => {
   const { balance, refetch: refetchCredits } = useCredits();
   const { fireConfetti, fireStars } = useConfetti();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [buildProgress, setBuildProgress] = useState(0);
   const [buildSteps, setBuildSteps] = useState<BuildStep[]>([
     { id: "analyze", label: "Analyzing requirements", status: "pending" },
@@ -77,11 +72,8 @@ const Builder = () => {
   const [buildComplete, setBuildComplete] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [readyToBuild, setReadyToBuild] = useState(false);
-  const [showFrameworkModal, setShowFrameworkModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showCustomization, setShowCustomization] = useState(false);
-  const [selectedFramework, setSelectedFramework] = useState<"react-native" | "flutter" | null>(null);
   const [generatedApp, setGeneratedApp] = useState<GeneratedApp | null>(null);
   const [previewScreen, setPreviewScreen] = useState("splash");
   const [activeTab, setActiveTab] = useState<"preview" | "react-native" | "backend" | "database">("preview");
@@ -111,7 +103,7 @@ const Builder = () => {
   }, []);
 
   const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isSending || isGenerating) return;
+    if (!content.trim() || isGenerating) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -121,97 +113,24 @@ const Builder = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
-    setIsSending(true);
+    
+    // Extract app name from message
+    const extractedName = extractAppName(content) || appName;
+    setAppName(extractedName);
 
-    try {
-      // Convert messages to chat format
-      const chatHistory: ChatMessage[] = messages.map((m) => ({
-        id: m.id,
-        role: m.type === "user" ? "user" : "assistant",
-        content: m.content,
-        timestamp: m.timestamp,
-      }));
-
-      const response = await sendChatMessage(content, chatHistory);
-
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        type: "assistant",
-        content: response.message,
-        timestamp: new Date(),
-        suggestedFeatures: response.suggestedFeatures,
-        readyToBuild: response.readyToBuild,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-      
-      if (response.readyToBuild) {
-        setReadyToBuild(true);
-      }
-
-      // Auto-detect app type from conversation to update preview
-      const allUserMessages = [...messages, userMessage].filter(m => m.type === "user").map(m => m.content).join(" ");
-      const detected = detectAppType(allUserMessages) as AppType;
-      if (detected) {
-        setDetectedAppType(detected);
-        // Update theme based on app type
-        const themesByType: Record<string, ColorTheme> = {
-          'food-delivery': { primary: '#FF5722', secondary: '#FFC107', accent: '#4CAF50' },
-          'ecommerce': { primary: '#3F51B5', secondary: '#FF4081', accent: '#00BCD4' },
-          'social': { primary: '#E91E63', secondary: '#9C27B0', accent: '#03A9F4' },
-          'booking': { primary: '#009688', secondary: '#FF9800', accent: '#2196F3' },
-          'fitness': { primary: '#8BC34A', secondary: '#FF5722', accent: '#00BCD4' },
-          'travel': { primary: '#2196F3', secondary: '#FF9800', accent: '#4CAF50' },
-          'education': { primary: '#673AB7', secondary: '#FF5722', accent: '#4CAF50' },
-          'healthcare': { primary: '#00BCD4', secondary: '#4CAF50', accent: '#FF9800' },
-        };
-        setPreviewTheme(themesByType[detected] || themesByType['ecommerce']);
-        setPreviewScreen('home');
-      }
-      
-      // Extract app name from conversation
-      const extractedName = extractAppName(allUserMessages);
-      if (extractedName) {
-        setAppName(extractedName);
-      }
-    } catch (error) {
-      toast.error("Failed to send message. Please try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleStartBuild = async (framework: "react-native" | "flutter") => {
-    if (balance < 20) {
-      toast.error("Not enough credits! You need 20 credits to build an app.");
-      navigate("/pricing");
-      return;
-    }
-
-    setSelectedFramework(framework);
+    // Immediately start generation
     setIsGenerating(true);
     setBuildProgress(0);
     setBuildComplete(false);
-    setReadyToBuild(false);
     setGeneratedApp(null);
     setSnackUrl(null);
     setShowExpoPreview(false);
     setActiveTab("preview");
-    
-    const frameworkName = framework === "react-native" ? "React Native" : "Flutter";
-    toast.info(`Starting ${frameworkName} app generation with Node.js backend... This will use 20 credits.`);
-
-    // Gather conversation for requirements parsing
-    const conversationText = messages
-      .filter(m => m.type === "user")
-      .map(m => m.content)
-      .join(" ");
-
-    const extractedName = extractAppName(conversationText) || appName;
-    setAppName(extractedName);
     setPreviewScreen("splash");
 
-    // Progress simulation for API call
+    toast.info("Generating your app...");
+
+    // Progress simulation
     const progressSteps = [
       { step: 'analyze', progress: 20, message: 'Analyzing requirements...', idx: 0 },
       { step: 'template', progress: 40, message: 'Selecting best template...', idx: 1 },
@@ -220,56 +139,37 @@ const Builder = () => {
       { step: 'preview', progress: 95, message: 'Building preview...', idx: 4 },
     ];
 
+    let progressIdx = 0;
+    const progressInterval = setInterval(() => {
+      if (progressIdx < progressSteps.length) {
+        const step = progressSteps[progressIdx];
+        setBuildProgress(step.progress);
+        setBuildSteps((prev) =>
+          prev.map((s, idx) => ({
+            ...s,
+            status: idx < step.idx ? "completed" : idx === step.idx ? "active" : "pending",
+          }))
+        );
+        progressIdx++;
+      }
+    }, 800);
+
     try {
-      // Start progress animation
-      let progressIdx = 0;
-      const progressInterval = setInterval(() => {
-        if (progressIdx < progressSteps.length) {
-          const step = progressSteps[progressIdx];
-          setBuildProgress(step.progress);
-          setBuildSteps((prev) =>
-            prev.map((s, idx) => ({
-              ...s,
-              status: idx < step.idx ? "completed" : idx === step.idx ? "active" : "pending",
-            }))
-          );
-          
-          const progressMessage: Message = {
-            id: `step-${step.step}-${Date.now()}`,
-            type: "assistant",
-            content: `⚙️ ${step.message}`,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, progressMessage]);
-          progressIdx++;
-        }
-      }, 800);
-
-      // Call the backend API
-      // Build messages array with only user messages
-      const userMessages = messages
-        .filter(m => m.type === "user")
-        .map(m => ({
-          role: "user" as const,
-          content: m.content
-        }));
-
+      // Call API with simple format
       const apiResponse = await api.post<{
-        success: boolean;
-        message?: string;
+        success?: boolean;
+        files?: any[];
         reactNativeCode?: string;
         backendCode?: string;
         databaseSchema?: string;
         previewUrl?: string;
-        files?: any[];
         snackUrl?: string;
-        appType?: AppType;
-        theme?: ColorTheme;
-        features?: FeatureType[];
-        screens?: string[];
+        message?: string;
       }>("/api/generate", {
         appName: extractedName,
-        messages: userMessages
+        messages: [
+          { role: "user", content: content.trim() }
+        ]
       });
 
       clearInterval(progressInterval);
@@ -280,105 +180,21 @@ const Builder = () => {
 
       const data = apiResponse.data;
 
-      if (data.success) {
-        // Update with API response
-        const result: GeneratedApp = {
-          reactNativeCode: data.reactNativeCode || '',
-          backendCode: data.backendCode || '',
-          databaseSchema: data.databaseSchema || '',
-          previewUrl: data.previewUrl || '',
-          files: data.files || [],
-        };
-
-        setGeneratedApp(result);
-        
-        if (data.snackUrl) {
-          setSnackUrl(data.snackUrl);
-        }
-
-        // Update detected values from API response
-        if (data.appType) setDetectedAppType(data.appType);
-        if (data.theme) setPreviewTheme(data.theme);
-        if (data.features) setSelectedFeatures(data.features);
-        if (data.screens) setSelectedScreens(data.screens);
-
-        setBuildSteps((prev) =>
-          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-        );
-        setBuildProgress(100);
-        setIsGenerating(false);
-        setBuildComplete(true);
-        setShowCustomization(true);
-        
-        // Fire confetti celebration!
-        setTimeout(() => {
-          fireConfetti();
-          fireStars();
-        }, 300);
-        
-        const fileCount = result.files?.length || 0;
-        const frontendFiles = result.files?.filter(f => f.type !== 'backend').length || 0;
-        const backendFiles = result.files?.filter(f => f.type === 'backend').length || 0;
-
-        const completeMessage: Message = {
-          id: `complete-${Date.now()}`,
-          type: "assistant",
-          content: `🎉 **Your ${extractedName} app is ready!**\n\n**Generated:**\n- ${frontendFiles || 'Multiple'} React Native files\n- ${backendFiles || 'Multiple'} Node.js backend files\n- Database schema\n\n${data.snackUrl ? '**Live Preview:** Open in Expo Snack to test your app!\n\n' : ''}You can now customize, download, or publish your app using the controls on the right.`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, completeMessage]);
-        
-        refetchCredits();
-        toast.success("🎉 Your app is ready! 20 credits deducted.", {
-          duration: 5000,
-        });
-      } else {
-        throw new Error(data.message || 'Generation failed');
-      }
-    } catch (error) {
-      console.error("App generation error:", error);
-      setIsGenerating(false);
-      setBuildSteps((prev) =>
-        prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
-      );
-      
-      // Fallback to local generation if API fails
-      toast.error("Backend unavailable. Using local generation...");
-      await handleLocalGeneration(framework, extractedName, conversationText);
-    }
-  };
-
-  // Fallback local generation
-  const handleLocalGeneration = async (framework: "react-native" | "flutter", extractedName: string, conversationText: string) => {
-    const requirements = parseConversationToRequirements(conversationText, extractedName, framework);
-    
-    setDetectedAppType(requirements.type);
-    setPreviewTheme(requirements.colorTheme);
-    setSelectedFeatures(requirements.features);
-    setSelectedScreens(requirements.screens);
-
-    const stepMapping: Record<string, number> = {
-      structure: 0,
-      frontend: 2,
-      backend: 3,
-      database: 3,
-      preview: 4,
-      complete: 4,
-    };
-
-    try {
-      const result = await generateApp(requirements, (progress: GenerationProgress) => {
-        setBuildProgress(progress.progress);
-        const stepIndex = stepMapping[progress.step] ?? 0;
-        setBuildSteps((prev) =>
-          prev.map((step, idx) => ({
-            ...step,
-            status: idx < stepIndex ? "completed" : idx === stepIndex ? "active" : "pending",
-          }))
-        );
-      });
+      // Process response
+      const result = {
+        reactNativeCode: data.reactNativeCode || '',
+        backendCode: data.backendCode || '',
+        databaseSchema: data.databaseSchema || '',
+        previewUrl: data.previewUrl || '',
+        files: data.files || [],
+      };
 
       setGeneratedApp(result);
+      
+      if (data.snackUrl) {
+        setSnackUrl(data.snackUrl);
+      }
+
       setBuildSteps((prev) =>
         prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
       );
@@ -387,40 +203,43 @@ const Builder = () => {
       setBuildComplete(true);
       setShowCustomization(true);
       
-      // Fire confetti celebration!
+      // Fire confetti
       setTimeout(() => {
         fireConfetti();
         fireStars();
       }, 300);
-      
+
       const completeMessage: Message = {
         id: `complete-${Date.now()}`,
         type: "assistant",
-        content: `🎉 **Your ${extractedName} app is ready!** (Generated locally)\n\nYou can now customize, download, or publish your app.`,
+        content: `🎉 **Your ${extractedName} app is ready!**\n\nYou can now customize, download, or publish your app.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, completeMessage]);
       
       refetchCredits();
-      toast.success("🎉 Your app is ready! 20 credits deducted.", {
-        duration: 5000,
-      });
+      toast.success("🎉 Your app is ready!");
+
     } catch (error) {
-      console.error("Local generation error:", error);
+      console.error("App generation error:", error);
+      clearInterval(progressInterval);
       setIsGenerating(false);
       setBuildSteps((prev) =>
         prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
       );
+      
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        type: "assistant",
+        content: "Failed to generate app. Please try again.",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
       toast.error("Failed to generate app. Please try again.");
     }
   };
 
   const handleRegenerate = async () => {
-    if (!selectedFramework) {
-      setShowFrameworkModal(true);
-      return;
-    }
-    
     if (balance < 20) {
       toast.error("Not enough credits! You need 20 credits to regenerate.");
       navigate("/pricing");
@@ -433,10 +252,9 @@ const Builder = () => {
     setGeneratedApp(null);
     setSnackUrl(null);
     
-    toast.info("Regenerating app with your customizations... This will use 20 credits.");
+    toast.info("Regenerating app with your customizations...");
 
     try {
-      // Build messages array with only user messages for regeneration
       const userMessages = messages
         .filter(m => m.type === "user")
         .map(m => ({
@@ -445,14 +263,14 @@ const Builder = () => {
         }));
 
       const apiResponse = await api.post<{
-        success: boolean;
-        message?: string;
+        success?: boolean;
+        files?: any[];
         reactNativeCode?: string;
         backendCode?: string;
         databaseSchema?: string;
         previewUrl?: string;
-        files?: any[];
         snackUrl?: string;
+        message?: string;
       }>("/api/generate", {
         appName,
         messages: userMessages
@@ -463,63 +281,30 @@ const Builder = () => {
       }
 
       const data = apiResponse.data;
-
-      if (data.success) {
-        const result: GeneratedApp = {
-          reactNativeCode: data.reactNativeCode || '',
-          backendCode: data.backendCode || '',
-          databaseSchema: data.databaseSchema || '',
-          previewUrl: data.previewUrl || '',
-          files: data.files || [],
-        };
-
-        setGeneratedApp(result);
-        if (data.snackUrl) setSnackUrl(data.snackUrl);
-
-        setBuildSteps((prev) =>
-          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-        );
-        setBuildProgress(100);
-        setIsGenerating(false);
-        setBuildComplete(true);
-        
-        refetchCredits();
-        toast.success("App regenerated successfully! 20 credits deducted.");
-      } else {
-        throw new Error(data.message || 'Regeneration failed');
-      }
-    } catch (error) {
-      console.error("Regeneration error:", error);
-      
-      // Fallback to local regeneration
-      const requirements = {
-        name: appName,
-        type: detectedAppType,
-        framework: selectedFramework,
-        features: selectedFeatures,
-        colorTheme: previewTheme,
-        screens: selectedScreens,
+      const result: GeneratedApp = {
+        reactNativeCode: data.reactNativeCode || '',
+        backendCode: data.backendCode || '',
+        databaseSchema: data.databaseSchema || '',
+        previewUrl: data.previewUrl || '',
+        files: data.files || [],
       };
 
-      try {
-        const result = await generateApp(requirements, (progress: GenerationProgress) => {
-          setBuildProgress(progress.progress);
-        });
+      setGeneratedApp(result);
+      if (data.snackUrl) setSnackUrl(data.snackUrl);
 
-        setGeneratedApp(result);
-        setBuildSteps((prev) =>
-          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-        );
-        setBuildProgress(100);
-        setIsGenerating(false);
-        setBuildComplete(true);
-        
-        refetchCredits();
-        toast.success("App regenerated locally! 20 credits deducted.");
-      } catch (localError) {
-        setIsGenerating(false);
-        toast.error("Failed to regenerate. Please try again.");
-      }
+      setBuildSteps((prev) =>
+        prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
+      );
+      setBuildProgress(100);
+      setIsGenerating(false);
+      setBuildComplete(true);
+      
+      refetchCredits();
+      toast.success("App regenerated successfully!");
+    } catch (error) {
+      console.error("Regeneration error:", error);
+      setIsGenerating(false);
+      toast.error("Failed to regenerate. Please try again.");
     }
   };
 
@@ -740,15 +525,6 @@ const Builder = () => {
                   </div>
                 ))}
                 
-                {/* Typing indicator */}
-                {isSending && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-2xl px-4 py-3">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    </div>
-                  </div>
-                )}
-
                 {/* Build Progress */}
                 {isGenerating && (
                   <div className="p-4 rounded-2xl border border-border bg-card/50">
@@ -757,21 +533,6 @@ const Builder = () => {
                       progress={buildProgress}
                       estimatedTime="~2 minutes"
                     />
-                  </div>
-                )}
-
-                {/* Ready to Build Button */}
-                {readyToBuild && !isGenerating && !buildComplete && (
-                  <div className="flex justify-center py-4">
-                    <Button
-                      variant="gradient"
-                      size="lg"
-                      className="gap-2"
-                      onClick={() => setShowFrameworkModal(true)}
-                    >
-                      <Rocket className="w-5 h-5" />
-                      Start Building (20 credits)
-                    </Button>
                   </div>
                 )}
                 
@@ -807,7 +568,7 @@ const Builder = () => {
                   placeholder={messages.length === 0 ? "Describe your app idea..." : "Continue the conversation..."}
                   className="flex-1 bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground min-h-[24px] max-h-[120px]"
                   rows={1}
-                  disabled={isSending || isGenerating}
+                  disabled={isGenerating}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -819,10 +580,10 @@ const Builder = () => {
                   type="submit"
                   size="icon"
                   variant="gradient"
-                  disabled={!inputValue.trim() || isSending || isGenerating}
+                  disabled={!inputValue.trim() || isGenerating}
                   className="shrink-0"
                 >
-                  {isSending ? (
+                  {isGenerating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Send className="w-4 h-4" />
@@ -903,14 +664,6 @@ const Builder = () => {
           />
         )}
       </main>
-
-      {/* Framework Selection Modal */}
-      <FrameworkSelectModal
-        open={showFrameworkModal}
-        onOpenChange={setShowFrameworkModal}
-        onConfirm={handleStartBuild}
-        creditsRequired={20}
-      />
 
       {/* Download Modal */}
       <DownloadModal
