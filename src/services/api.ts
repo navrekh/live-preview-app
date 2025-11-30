@@ -1,7 +1,7 @@
 // AWS Backend API Configuration
 // Set VITE_AWS_API_URL in your .env file to point to your AWS backend
 
-const API_BASE_URL = import.meta.env.VITE_AWS_API_URL ?? 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_AWS_API_URL ?? 'http://13.233.177.5:3001';
 
 interface ApiResponse<T> {
   data?: T;
