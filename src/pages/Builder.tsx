@@ -15,17 +15,21 @@ import {
   Settings,
   PanelRightClose,
   PanelRightOpen,
-  ExternalLink
+  ExternalLink,
+  PartyPopper,
+  Smartphone
 } from "lucide-react";
 import BuildProgress from "@/components/BuildProgress";
 import { AppPreview } from "@/components/preview";
 import { CodeTabs, CustomizationPanel, DownloadModal } from "@/components/builder";
+import ExpoPreview from "@/components/builder/ExpoPreview";
 import Logo from "@/components/Logo";
 import FrameworkSelectModal from "@/components/FrameworkSelectModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { sendChatMessage, ChatMessage, ChatResponse } from "@/services/chat";
 import { useCredits } from "@/hooks/useCredits";
+import { useConfetti } from "@/hooks/useConfetti";
 import { 
   generateApp, 
   parseConversationToRequirements,
@@ -59,6 +63,7 @@ const Builder = () => {
   const initialPrompt = location.state?.prompt || "";
   
   const { balance, refetch: refetchCredits } = useCredits();
+  const { fireConfetti, fireStars } = useConfetti();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [buildProgress, setBuildProgress] = useState(0);
@@ -297,6 +302,12 @@ const Builder = () => {
         setBuildComplete(true);
         setShowCustomization(true);
         
+        // Fire confetti celebration!
+        setTimeout(() => {
+          fireConfetti();
+          fireStars();
+        }, 300);
+        
         const fileCount = result.files?.length || 0;
         const frontendFiles = result.files?.filter(f => f.type !== 'backend').length || 0;
         const backendFiles = result.files?.filter(f => f.type === 'backend').length || 0;
@@ -310,7 +321,9 @@ const Builder = () => {
         setMessages((prev) => [...prev, completeMessage]);
         
         refetchCredits();
-        toast.success("Your app is ready! 20 credits deducted.");
+        toast.success("🎉 Your app is ready! 20 credits deducted.", {
+          duration: 5000,
+        });
       } else {
         throw new Error(data.message || 'Generation failed');
       }
@@ -366,6 +379,12 @@ const Builder = () => {
       setBuildComplete(true);
       setShowCustomization(true);
       
+      // Fire confetti celebration!
+      setTimeout(() => {
+        fireConfetti();
+        fireStars();
+      }, 300);
+      
       const completeMessage: Message = {
         id: `complete-${Date.now()}`,
         type: "assistant",
@@ -375,7 +394,9 @@ const Builder = () => {
       setMessages((prev) => [...prev, completeMessage]);
       
       refetchCredits();
-      toast.success("Your app is ready! 20 credits deducted.");
+      toast.success("🎉 Your app is ready! 20 credits deducted.", {
+        duration: 5000,
+      });
     } catch (error) {
       console.error("Local generation error:", error);
       setIsGenerating(false);
@@ -798,18 +819,56 @@ const Builder = () => {
         </div>
 
         {/* Center - Phone Preview */}
-        <div className="w-auto flex items-start justify-center p-6 bg-muted/20 overflow-y-auto">
-          <AppPreview
-            appType={detectedAppType}
-            appName={appName}
-            theme={previewTheme}
-            features={selectedFeatures}
-            currentScreen={previewScreen}
-            onScreenChange={setPreviewScreen}
-            isGenerating={isGenerating}
-            showNavigator={buildComplete || messages.length > 2}
-            showSettings={buildComplete}
-          />
+        <div className="w-auto flex flex-col items-center justify-start p-6 bg-muted/20 overflow-y-auto">
+          {/* Preview Toggle */}
+          {buildComplete && snackUrl && (
+            <div className="flex items-center gap-2 mb-4 p-1 bg-muted rounded-lg animate-fade-in">
+              <Button
+                variant={!showExpoPreview ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setShowExpoPreview(false)}
+                className="gap-2"
+              >
+                <Smartphone className="w-4 h-4" />
+                Phone Preview
+              </Button>
+              <Button
+                variant={showExpoPreview ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setShowExpoPreview(true)}
+                className="gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Live Expo
+              </Button>
+            </div>
+          )}
+          
+          {/* Success Badge */}
+          {buildComplete && (
+            <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-full animate-bounce-in">
+              <PartyPopper className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-medium text-green-500">App Ready!</span>
+            </div>
+          )}
+
+          {showExpoPreview && snackUrl ? (
+            <div className="w-[400px] h-[700px] rounded-xl border border-border overflow-hidden bg-card animate-fade-in">
+              <ExpoPreview snackUrl={snackUrl} appName={appName} isLoading={isGenerating} />
+            </div>
+          ) : (
+            <AppPreview
+              appType={detectedAppType}
+              appName={appName}
+              theme={previewTheme}
+              features={selectedFeatures}
+              currentScreen={previewScreen}
+              onScreenChange={setPreviewScreen}
+              isGenerating={isGenerating}
+              showNavigator={buildComplete || messages.length > 2}
+              showSettings={buildComplete}
+            />
+          )}
         </div>
 
         {/* Right - Customization Panel */}
