@@ -5,8 +5,6 @@ import {
   Download,
   Send,
   Paperclip,
-  Apple,
-  Play,
   FileUp,
   Rocket,
   Loader2,
@@ -19,6 +17,7 @@ import {
   PartyPopper,
   Smartphone
 } from "lucide-react";
+import { GooglePlayIcon, AppStoreIcon } from "@/components/StoreIcons";
 import BuildProgress from "@/components/BuildProgress";
 import { AppPreview } from "@/components/preview";
 import { CodeTabs, CustomizationPanel, DownloadModal } from "@/components/builder";
@@ -645,7 +644,7 @@ const Builder = () => {
               disabled={!buildComplete}
               onClick={() => toast.info("Publishing to Play Store...")}
             >
-              <Play className="w-4 h-4" />
+              <GooglePlayIcon className="w-4 h-4" />
               <span className="hidden md:inline">Play Store</span>
             </Button>
             <Button 
@@ -655,7 +654,7 @@ const Builder = () => {
               disabled={!buildComplete}
               onClick={() => toast.info("Publishing to App Store...")}
             >
-              <Apple className="w-4 h-4" />
+              <AppStoreIcon className="w-4 h-4" />
               <span className="hidden md:inline">App Store</span>
             </Button>
           </div>
