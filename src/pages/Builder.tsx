@@ -14,7 +14,8 @@ import {
   Code,
   Settings,
   PanelRightClose,
-  PanelRightOpen
+  PanelRightOpen,
+  ExternalLink
 } from "lucide-react";
 import BuildProgress from "@/components/BuildProgress";
 import { AppPreview } from "@/components/preview";
@@ -79,6 +80,8 @@ const Builder = () => {
   const [generatedApp, setGeneratedApp] = useState<GeneratedApp | null>(null);
   const [previewScreen, setPreviewScreen] = useState("splash");
   const [activeTab, setActiveTab] = useState<"preview" | "react-native" | "backend" | "database">("preview");
+  const [snackUrl, setSnackUrl] = useState<string | null>(null);
+  const [showExpoPreview, setShowExpoPreview] = useState(false);
   
   // Customization state
   const [appName, setAppName] = useState("MyApp");
@@ -186,6 +189,8 @@ const Builder = () => {
     setBuildComplete(false);
     setReadyToBuild(false);
     setGeneratedApp(null);
+    setSnackUrl(null);
+    setShowExpoPreview(false);
     setActiveTab("preview");
     
     const frameworkName = framework === "react-native" ? "React Native" : "Flutter";
@@ -197,17 +202,139 @@ const Builder = () => {
       .map(m => m.content)
       .join(" ");
 
-    // Parse requirements from conversation
     const extractedName = extractAppName(conversationText) || appName;
+    setAppName(extractedName);
+    setPreviewScreen("splash");
+
+    // Progress simulation for API call
+    const progressSteps = [
+      { step: 'analyze', progress: 20, message: 'Analyzing requirements...', idx: 0 },
+      { step: 'template', progress: 40, message: 'Selecting best template...', idx: 1 },
+      { step: 'frontend', progress: 60, message: 'Generating React Native code...', idx: 2 },
+      { step: 'backend', progress: 80, message: 'Creating backend APIs...', idx: 3 },
+      { step: 'preview', progress: 95, message: 'Building preview...', idx: 4 },
+    ];
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Start progress animation
+      let progressIdx = 0;
+      const progressInterval = setInterval(() => {
+        if (progressIdx < progressSteps.length) {
+          const step = progressSteps[progressIdx];
+          setBuildProgress(step.progress);
+          setBuildSteps((prev) =>
+            prev.map((s, idx) => ({
+              ...s,
+              status: idx < step.idx ? "completed" : idx === step.idx ? "active" : "pending",
+            }))
+          );
+          
+          const progressMessage: Message = {
+            id: `step-${step.step}-${Date.now()}`,
+            type: "assistant",
+            content: `⚙️ ${step.message}`,
+            timestamp: new Date(),
+          };
+          setMessages((prev) => [...prev, progressMessage]);
+          progressIdx++;
+        }
+      }, 800);
+
+      // Call the backend API
+      const response = await fetch('https://appdev.co.in/api/generate/app', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          appName: extractedName,
+          conversationHistory: messages.map(m => ({ role: m.type, content: m.content })),
+          framework,
+          appType: detectedAppType,
+          theme: previewTheme,
+          features: selectedFeatures,
+        })
+      });
+
+      clearInterval(progressInterval);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to generate app');
+      }
+
+      if (data.success) {
+        // Update with API response
+        const result: GeneratedApp = {
+          reactNativeCode: data.reactNativeCode || '',
+          backendCode: data.backendCode || '',
+          databaseSchema: data.databaseSchema || '',
+          previewUrl: data.previewUrl || '',
+          files: data.files || [],
+        };
+
+        setGeneratedApp(result);
+        
+        if (data.snackUrl) {
+          setSnackUrl(data.snackUrl);
+        }
+
+        // Update detected values from API response
+        if (data.appType) setDetectedAppType(data.appType);
+        if (data.theme) setPreviewTheme(data.theme);
+        if (data.features) setSelectedFeatures(data.features);
+        if (data.screens) setSelectedScreens(data.screens);
+
+        setBuildSteps((prev) =>
+          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
+        );
+        setBuildProgress(100);
+        setIsGenerating(false);
+        setBuildComplete(true);
+        setShowCustomization(true);
+        
+        const fileCount = result.files?.length || 0;
+        const frontendFiles = result.files?.filter(f => f.type !== 'backend').length || 0;
+        const backendFiles = result.files?.filter(f => f.type === 'backend').length || 0;
+
+        const completeMessage: Message = {
+          id: `complete-${Date.now()}`,
+          type: "assistant",
+          content: `🎉 **Your ${extractedName} app is ready!**\n\n**Generated:**\n- ${frontendFiles || 'Multiple'} React Native files\n- ${backendFiles || 'Multiple'} Node.js backend files\n- Database schema\n\n${data.snackUrl ? '**Live Preview:** Open in Expo Snack to test your app!\n\n' : ''}You can now customize, download, or publish your app using the controls on the right.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, completeMessage]);
+        
+        refetchCredits();
+        toast.success("Your app is ready! 20 credits deducted.");
+      } else {
+        throw new Error(data.message || 'Generation failed');
+      }
+    } catch (error) {
+      console.error("App generation error:", error);
+      setIsGenerating(false);
+      setBuildSteps((prev) =>
+        prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
+      );
+      
+      // Fallback to local generation if API fails
+      toast.error("Backend unavailable. Using local generation...");
+      await handleLocalGeneration(framework, extractedName, conversationText);
+    }
+  };
+
+  // Fallback local generation
+  const handleLocalGeneration = async (framework: "react-native" | "flutter", extractedName: string, conversationText: string) => {
     const requirements = parseConversationToRequirements(conversationText, extractedName, framework);
     
-    // Update state with parsed requirements
-    setAppName(extractedName);
     setDetectedAppType(requirements.type);
     setPreviewTheme(requirements.colorTheme);
     setSelectedFeatures(requirements.features);
     setSelectedScreens(requirements.screens);
-    setPreviewScreen("splash");
 
     const stepMapping: Record<string, number> = {
       structure: 0,
@@ -219,11 +346,8 @@ const Builder = () => {
     };
 
     try {
-      // Generate the app with progress updates
       const result = await generateApp(requirements, (progress: GenerationProgress) => {
         setBuildProgress(progress.progress);
-        
-        // Update build steps based on current step
         const stepIndex = stepMapping[progress.step] ?? 0;
         setBuildSteps((prev) =>
           prev.map((step, idx) => ({
@@ -231,21 +355,9 @@ const Builder = () => {
             status: idx < stepIndex ? "completed" : idx === stepIndex ? "active" : "pending",
           }))
         );
-
-        // Add progress message
-        if (progress.step !== 'complete') {
-          const systemMessage: Message = {
-            id: `step-${progress.step}-${Date.now()}`,
-            type: "assistant",
-            content: `⚙️ ${progress.message}`,
-            timestamp: new Date(),
-          };
-          setMessages((prev) => [...prev, systemMessage]);
-        }
       });
 
       setGeneratedApp(result);
-
       setBuildSteps((prev) =>
         prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
       );
@@ -257,16 +369,15 @@ const Builder = () => {
       const completeMessage: Message = {
         id: `complete-${Date.now()}`,
         type: "assistant",
-        content: `🎉 **Your ${extractedName} app is ready!**\n\n**Generated:**\n- ${result.files.filter(f => f.type !== 'backend').length} React Native files\n- ${result.files.filter(f => f.type === 'backend').length} Node.js backend files\n- Database schema\n\nYou can now customize, download, or publish your app using the controls on the right.`,
+        content: `🎉 **Your ${extractedName} app is ready!** (Generated locally)\n\nYou can now customize, download, or publish your app.`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, completeMessage]);
       
-      // Deduct credits
       refetchCredits();
       toast.success("Your app is ready! 20 credits deducted.");
     } catch (error) {
-      console.error("App generation error:", error);
+      console.error("Local generation error:", error);
       setIsGenerating(false);
       setBuildSteps((prev) =>
         prev.map((step) => ({ ...step, status: "pending" as BuildStepStatus }))
@@ -287,58 +398,102 @@ const Builder = () => {
       return;
     }
     
-    // Regenerate with current customization settings
     setIsGenerating(true);
     setBuildProgress(0);
     setBuildComplete(false);
     setGeneratedApp(null);
+    setSnackUrl(null);
     
     toast.info("Regenerating app with your customizations... This will use 20 credits.");
-    
-    const requirements = {
-      name: appName,
-      type: detectedAppType,
-      framework: selectedFramework,
-      features: selectedFeatures,
-      colorTheme: previewTheme,
-      screens: selectedScreens,
-    };
-    
-    const stepMapping: Record<string, number> = {
-      structure: 0,
-      frontend: 2,
-      backend: 3,
-      database: 3,
-      preview: 4,
-      complete: 4,
-    };
 
     try {
-      const result = await generateApp(requirements, (progress: GenerationProgress) => {
-        setBuildProgress(progress.progress);
-        const stepIndex = stepMapping[progress.step] ?? 0;
-        setBuildSteps((prev) =>
-          prev.map((step, idx) => ({
-            ...step,
-            status: idx < stepIndex ? "completed" : idx === stepIndex ? "active" : "pending",
-          }))
-        );
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch('https://appdev.co.in/api/generate/app', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          appName,
+          framework: selectedFramework,
+          appType: detectedAppType,
+          theme: previewTheme,
+          features: selectedFeatures,
+          screens: selectedScreens,
+          regenerate: true,
+        })
       });
 
-      setGeneratedApp(result);
-      setBuildSteps((prev) =>
-        prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
-      );
-      setBuildProgress(100);
-      setIsGenerating(false);
-      setBuildComplete(true);
-      
-      refetchCredits();
-      toast.success("App regenerated successfully! 20 credits deducted.");
+      const data = await response.json();
+
+      if (data.success) {
+        const result: GeneratedApp = {
+          reactNativeCode: data.reactNativeCode || '',
+          backendCode: data.backendCode || '',
+          databaseSchema: data.databaseSchema || '',
+          previewUrl: data.previewUrl || '',
+          files: data.files || [],
+        };
+
+        setGeneratedApp(result);
+        if (data.snackUrl) setSnackUrl(data.snackUrl);
+
+        setBuildSteps((prev) =>
+          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
+        );
+        setBuildProgress(100);
+        setIsGenerating(false);
+        setBuildComplete(true);
+        
+        refetchCredits();
+        toast.success("App regenerated successfully! 20 credits deducted.");
+      } else {
+        throw new Error(data.message || 'Regeneration failed');
+      }
     } catch (error) {
       console.error("Regeneration error:", error);
-      setIsGenerating(false);
-      toast.error("Failed to regenerate. Please try again.");
+      
+      // Fallback to local regeneration
+      const requirements = {
+        name: appName,
+        type: detectedAppType,
+        framework: selectedFramework,
+        features: selectedFeatures,
+        colorTheme: previewTheme,
+        screens: selectedScreens,
+      };
+
+      try {
+        const result = await generateApp(requirements, (progress: GenerationProgress) => {
+          setBuildProgress(progress.progress);
+        });
+
+        setGeneratedApp(result);
+        setBuildSteps((prev) =>
+          prev.map((step) => ({ ...step, status: "completed" as BuildStepStatus }))
+        );
+        setBuildProgress(100);
+        setIsGenerating(false);
+        setBuildComplete(true);
+        
+        refetchCredits();
+        toast.success("App regenerated locally! 20 credits deducted.");
+      } catch (localError) {
+        setIsGenerating(false);
+        toast.error("Failed to regenerate. Please try again.");
+      }
+    }
+  };
+
+  const handleOpenExpoSnack = () => {
+    if (snackUrl) {
+      window.open(snackUrl, '_blank');
+    } else {
+      const encodedName = encodeURIComponent(appName || 'MyApp');
+      window.open(`https://snack.expo.dev/?name=${encodedName}&platform=ios`, '_blank');
+      toast.info('Opening Expo Snack - paste the generated code to preview');
     }
   };
 
@@ -451,6 +606,16 @@ const Builder = () => {
             >
               {showCustomization ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
               <span className="hidden sm:inline">Customize</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              disabled={!buildComplete}
+              onClick={handleOpenExpoSnack}
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden sm:inline">Expo Snack</span>
             </Button>
             <Button 
               variant="outline" 
