@@ -37,6 +37,7 @@ import {
   GenerationProgress 
 } from "@/services/generator";
 import { AppType, FeatureType, ColorTheme } from "@/services/generator/types";
+import api from "@/services/api";
 
 type BuildStepStatus = "pending" | "active" | "completed";
 
@@ -220,8 +221,6 @@ const Builder = () => {
     ];
 
     try {
-      const token = localStorage.getItem('token');
-      
       // Start progress animation
       let progressIdx = 0;
       const progressInterval = setInterval(() => {
@@ -247,29 +246,39 @@ const Builder = () => {
       }, 800);
 
       // Call the backend API
-      const response = await fetch('https://appdev.co.in/api/generate/app', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({
-          appName: extractedName,
-          conversationHistory: messages.map(m => ({ role: m.type, content: m.content })),
-          framework,
-          appType: detectedAppType,
-          theme: previewTheme,
-          features: selectedFeatures,
-        })
+      // Build messages array with only user messages
+      const userMessages = messages
+        .filter(m => m.type === "user")
+        .map(m => ({
+          role: "user" as const,
+          content: m.content
+        }));
+
+      const apiResponse = await api.post<{
+        success: boolean;
+        message?: string;
+        reactNativeCode?: string;
+        backendCode?: string;
+        databaseSchema?: string;
+        previewUrl?: string;
+        files?: any[];
+        snackUrl?: string;
+        appType?: AppType;
+        theme?: ColorTheme;
+        features?: FeatureType[];
+        screens?: string[];
+      }>("/api/generate", {
+        appName: extractedName,
+        messages: userMessages
       });
 
       clearInterval(progressInterval);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to generate app');
+      if (apiResponse.error || !apiResponse.data) {
+        throw new Error(apiResponse.error || 'Failed to generate app');
       }
+
+      const data = apiResponse.data;
 
       if (data.success) {
         // Update with API response
@@ -427,26 +436,33 @@ const Builder = () => {
     toast.info("Regenerating app with your customizations... This will use 20 credits.");
 
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch('https://appdev.co.in/api/generate/app', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({
-          appName,
-          framework: selectedFramework,
-          appType: detectedAppType,
-          theme: previewTheme,
-          features: selectedFeatures,
-          screens: selectedScreens,
-          regenerate: true,
-        })
+      // Build messages array with only user messages for regeneration
+      const userMessages = messages
+        .filter(m => m.type === "user")
+        .map(m => ({
+          role: "user" as const,
+          content: m.content
+        }));
+
+      const apiResponse = await api.post<{
+        success: boolean;
+        message?: string;
+        reactNativeCode?: string;
+        backendCode?: string;
+        databaseSchema?: string;
+        previewUrl?: string;
+        files?: any[];
+        snackUrl?: string;
+      }>("/api/generate", {
+        appName,
+        messages: userMessages
       });
 
-      const data = await response.json();
+      if (apiResponse.error || !apiResponse.data) {
+        throw new Error(apiResponse.error || 'Regeneration failed');
+      }
+
+      const data = apiResponse.data;
 
       if (data.success) {
         const result: GeneratedApp = {
