@@ -40,6 +40,7 @@ const Builder = () => {
     backendCode,
     buildComplete,
     clearMessages,
+    detectedAppType,
   } = useBuilder("MyApp");
 
   // Auto-scroll to bottom when messages change
@@ -271,6 +272,7 @@ const Builder = () => {
               files={generatedFiles}
               appName={appName}
               isLoading={isLoading}
+              detectedAppType={detectedAppType}
             />
 
             {/* App Name Input */}
